@@ -1,5 +1,6 @@
 # fastapi entry point
 # run: uvicorn main:app --reload
+# main file, wag gagalawin. chat ako if may need ibago
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

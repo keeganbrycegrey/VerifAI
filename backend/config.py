@@ -1,5 +1,5 @@
 # all api keys and env vars live here
-# never hardcode keys elsewhere
+# wag ilalagay ang keys KAHIT SAAN, .env lang dapat, at dapat naka .gitignore
 # copy .env.example to .env
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

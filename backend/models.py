@@ -1,5 +1,5 @@
 # shared pydantic data contracts
-# do not modify fields without notifying me 
+# ule, wag gagalawin, chat ako if may tanong dito 
 
 from pydantic import BaseModel
 from typing import Optional
