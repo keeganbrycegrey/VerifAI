@@ -9,7 +9,7 @@ from sources.gdelt_client import query_coverage
 from sources.newsapi_client import search_philippines
 from sources.rss_fetcher import fetch_relevant
 
-# load bias registry once at import — pathlib avoids __file__ fragility
+# load bias registry once at import , pathlib avoids __file__ fragility
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
 with open(_REGISTRY_PATH) as f:
     _BIAS_REGISTRY: dict = json.load(f)["outlets"]

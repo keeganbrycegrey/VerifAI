@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     )
 
     # app
-    APP_NAME: str = "TSEK.AI"
+    APP_NAME: str = "VerifAI"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # messenger — developers.facebook.com
     MESSENGER_PAGE_ACCESS_TOKEN: str = ""
-    MESSENGER_VERIFY_TOKEN: str = "tsek_ai_verify"
+    MESSENGER_VERIFY_TOKEN: str = "VerifAI"
 
     # gdelt — no key needed
     GDELT_BASE_URL: str = "https://api.gdeltproject.org/api/v2/doc/doc"
