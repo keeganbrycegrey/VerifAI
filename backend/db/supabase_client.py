@@ -1,5 +1,6 @@
 # supabase db operations
 # non-fatal errors — pipeline continues if db is down
+# add cache, - run through supabas
 
 from collections import defaultdict, Counter
 from datetime import datetime, timezone

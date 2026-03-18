@@ -11,6 +11,7 @@ from config import get_settings
 settings = get_settings()
 
 VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
+#	> Quantifiable value > GFAPI
 
 # lazy init — avoids crash on empty key
 _client: AsyncGroq | None = None
