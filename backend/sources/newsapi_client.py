@@ -1,5 +1,5 @@
 # searches newsapi for philippine coverage
-# free tier: 100 requests/day
+# 100 requests/day lang tayo since free tier lang ang gamit
 
 import httpx
 from config import get_settings

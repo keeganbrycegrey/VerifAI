@@ -1,4 +1,4 @@
-# formats verdict into filipino messenger message
+# formats verdict into tagalog
 # mobile-friendly, no markdown
 
 from models import Verdict
@@ -45,7 +45,7 @@ def format_verdict_for_messenger(verdict: Verdict) -> str:
         source_text = ""
 
     return (
-        f"{emoji} TSEK.AI HATOL: {label}\n"
+        f"{emoji} VerifAI HATOL: {label}\n"
         f"Kumpiyansa: {pct}%\n"
         f"{'─' * 30}\n"
         f"📋 CLAIM:\n{verdict.claim}\n"
@@ -54,5 +54,5 @@ def format_verdict_for_messenger(verdict: Verdict) -> str:
         f"{blind_spot}"
         f"{source_text}\n"
         f"{'─' * 30}\n"
-        f"🤖 Pinagana ng TSEK.AI | Huwag basta maniwala — mag-tsek muna!"
+        f"🤖 Pinagana ng VerifAI | Huwag basta maniwala — mag-verifAI muna!"
     )

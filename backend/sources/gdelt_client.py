@@ -1,5 +1,5 @@
 # queries gdelt document api
-# no api key required
+# no api key required dito
 
 import httpx
 from config import get_settings

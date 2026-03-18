@@ -1,5 +1,5 @@
 # fetches and parses philippine rss feeds
-# returns flat list of articles
+# returns flat list of articles, no limits im pretty sure
 
 import httpx
 import feedparser

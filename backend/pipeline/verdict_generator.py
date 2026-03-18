@@ -1,5 +1,6 @@
 # generates bilingual verdict from all evidence
-# reasons over fact-checks + coverage data
+# reasons over fact-checks + coverage data,
+# wag ito i-ooverwrite sa pipeline.py, dapat separate file siya since medyo complex na logic niya
 
 import json
 from datetime import datetime, timezone
