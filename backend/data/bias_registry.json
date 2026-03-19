@@ -1,0 +1,41 @@
+{
+  "_note": "hand-curated bias ratings for philippine news outlets with confirmed rss feeds. based on cmfr assessments and documented editorial patterns. values: left | center | right | state | aggregator",
+  "_last_updated": "2026-03",
+  "outlets": {
+    "Rappler": {
+      "bias": "left",
+      "domain": "rappler.com",
+      "rss": "https://www.rappler.com/feed"
+    },
+    "GMA News": {
+      "bias": "center",
+      "domain": "gmanetwork.com",
+      "rss": "https://data.gmanews.tv/gno/rss/news/feed.xml"
+    },
+    "Inquirer": {
+      "bias": "center",
+      "domain": "inquirer.net",
+      "rss": "https://newsinfo.inquirer.net/feed"
+    },
+    "Philippine News Agency": {
+      "bias": "state",
+      "domain": "pna.gov.ph",
+      "rss": "https://www.pna.gov.ph/latest.rss"
+    },
+    "Business Mirror": {
+      "bias": "center",
+      "domain": "businessmirror.com.ph",
+      "rss": "https://businessmirror.com.ph/feed"
+    },
+    "Eagle News": {
+      "bias": "right",
+      "domain": "eaglenews.ph",
+      "rss": "https://www.eaglenews.ph/feed"
+    },
+    "Google News PH": {
+      "bias": "aggregator",
+      "domain": "news.google.com",
+      "rss": "https://news.google.com/rss?hl=en-PH&gl=PH&ceid=PH:en"
+    }
+  }
+}
