@@ -5,7 +5,7 @@
 from collections import defaultdict, Counter
 from datetime import datetime, timezone
 from supabase import create_client, Client
-from models import Verdict, VerdictSummary, TrendingClaim
+from models import Verdict, VerdictSummary, TrendingClaim, FactCheckMatch, CoverageReport
 from config import get_settings
 
 settings = get_settings()
@@ -120,3 +120,34 @@ async def get_coverage_heatmap() -> dict:
     except Exception as e:
         print(f"supabase heatmap error: {e}")
         return {"outlet_frequency": {}}
+
+async def get_cached_verdict(claim_text: str) -> Verdict | None:
+    # normalize claim for matching
+    try:
+        res = (
+            _get_client().table("verdicts")
+            .select("*")
+            .ilike("claim", claim_text.strip())
+            .order("timestamp", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if res.data:
+            row = res.data[0]
+            return Verdict(
+                claim=row["claim"],
+                rating=row["rating"],
+                confidence=row["confidence"],
+                explanation_en=row["explanation_en"],
+                explanation_tl=row["explanation_tl"],
+                sources=row["sources"],
+                fact_checks_found=[FactCheckMatch(**fc) for fc in row["fact_checks"]],
+                coverage=CoverageReport(**row["coverage"]),
+                input_type=row["input_type"],
+                source_surface=row["source_surface"],
+                timestamp=row["timestamp"],
+            )
+        return None
+    except Exception as e:
+        print(f"cache lookup error: {e}")
+        return None
