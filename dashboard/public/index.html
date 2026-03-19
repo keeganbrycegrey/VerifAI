@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard</title>
 
 <style>
 body {
   margin: 0;
-  font-family: Cambria;
+  font-family: Cambria, serif;
   background: #262626;
 }
-.container {
+main.container {
   padding: 20px;
 }
-.top-row {
+.top-row, .bottom-row {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
@@ -24,17 +25,11 @@ body {
   padding: 20px;
   box-sizing: border-box;
 }
-.usage-day { width: 25%; }
-.weekly-graph { width: 50%; }
-.bias { width: 25%; }
-.bottom-row {
-  display: flex;
-  gap: 20px;
-}
-.column {
-  width: 50%;
-  min-height: 300px;
-}
+.usage-day { width: 25%; min-width: 150px; }
+.weekly-graph { width: 50%; min-width: 300px; }
+.bias { width: 25%; min-width: 150px; }
+.column { width: 50%; min-height: 300px; min-width: 200px; }
+
 h2 {
   margin: 0 0 10px 0;
   font-size: 18px;
@@ -59,6 +54,7 @@ h2 {
   border-radius: 15px;
   padding: 10px;
 }
+
 .filter-bar {
   display: flex;
   gap: 10px;
@@ -82,31 +78,38 @@ h2 {
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="top-row">
+<main class="container">
+
+  <section class="top-row">
     <div class="box usage-day">
       <h2>DAILY USAGE</h2>
       <div class="date">DATE</div>
       <div class="hours_and_minutes">0h 0m</div>
     </div>
+
     <div class="box weekly-graph">
       <h2>WEEKLY USAGE</h2>
-      <div class="graph"></div>
+      <div class="graph" aria-label="Weekly usage graph"></div>
     </div>
+
     <div class="box bias">
       <h2>BIAS REGISTRY</h2>
-       </div>
-  </div>
-  <div class="bottom-row">    
+      <div class="content">No biases recorded</div>
+    </div>
+  </section>
+
+  <section class="bottom-row">
     <div class="box column">
       <h2>VERDICT FEED</h2>
-      <div class="content"></div>
+      <div class="content">No verdicts yet</div>
     </div>
+
     <div class="box column">
       <h2>TRENDING CLAIMS</h2>
-      <div class="content"></div>
+      <div class="content">No claims yet</div>
     </div>
-  </div>
-</div>
+  </section>
+
+</main>
 </body>
 </html>
