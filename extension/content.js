@@ -25,8 +25,6 @@ async function request_verification(text) {
     });
 }
 
-
-
 // panel.html, panel.css injection
 function show_verdict_panel(data) {
     if (document.getElementById('verifai-root')) return;
@@ -40,7 +38,6 @@ function show_verdict_panel(data) {
     document.body.appendChild(host);
 
     const shadow = host.attachShadow({ mode: 'open' });
-
    
     Promise.all([
         fetch(chrome.runtime.getURL('panel.html')).then(res => res.text()),
@@ -59,8 +56,6 @@ function show_verdict_panel(data) {
     });
 }
 
-
-
 // data mapping from fastapi -> panel.html
 function update_panel_ui(shadow, data) {
     const verdict_el = shadow.getElementById('verif-verdict');
@@ -68,8 +63,8 @@ function update_panel_ui(shadow, data) {
     const source_el = shadow.getElementById('verif-source');
 
     if (verdict_el) verdict_el.innerText = data.verdict;
-    if (confidence_el) confidence_el.innerText = `${data.confidence}% Confidence`;
-    if (source_el) source_el.innerText = `Source: ${data.source_surface || 'Global Cache'}`;
+    if (confidence_el) confidence_el.innerText = `${data.confidence_score}% Confidence`;
+    if (source_el) source_el.innerText = `Source: ${data.source_url || 'Global Cache'}`;
     
     const close_btn = shadow.getElementById('verif-close');
     if (close_btn) {
