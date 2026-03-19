@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       body: JSON.stringify({
         input_type: request.type || "text",
         content: request.content,
-        source_surface: "extension"
+        source_url: "extension"
       })
     })
     .then(res => res.json())
