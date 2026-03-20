@@ -59,7 +59,7 @@ function show_popup() {
         verifAI_popup = shadow;
         host.style.pointerEvents = 'auto'; // Now capture events
 
-// Underline the claim
+        // Underline the claim
         underlineClaim(range);
 
         // Update text preview
@@ -69,10 +69,7 @@ function show_popup() {
         }
 
         // Listen for events from popup.js
-        const factcheckHandler = () => {
-            hide_popup();
-            request_verification(selectedClaim);
-        };
+        const factcheckHandler = () => request_verification(selectedClaim);
         const closeHandler = () => hide_popup();
         const trashHandler = () => {
             removeUnderline();
@@ -82,8 +79,8 @@ function show_popup() {
         window.addEventListener('verifai:factcheck', factcheckHandler, { once: true });
         window.addEventListener('verifai:closepopup', closeHandler, { once: true });
         window.addEventListener('verifai:trashunderline', trashHandler, { once: true });
-
-        window.addEventListener('verifai:closepopup', () => {
+        window.addEventListener('verifai:viewpanel', () => {
+            show_verdict_panel();
             hide_popup();
         }, { once: true });
     });
@@ -162,7 +159,7 @@ async function request_verification(text) {
     const host = document.getElementById('verifai-popup-root');
     if (host) {
         const shadow = host.shadowRoot;
-        const loadingEl = shadow.getElementById('preview-verdict');
+        const loadingEl = shadow.getElementById('preview-verdict') || shadow.querySelector('.preview-verdict');
         if (loadingEl) loadingEl.textContent = 'Verifying...';
     }
 
@@ -172,85 +169,36 @@ async function request_verification(text) {
         type: "text"
     }, (response) => {
         if (response && response.status === "success") {
-            updateExpandedPopup(response.data);
-        } else {
-            console.error("VerifAI: API match failed or backend is down.");
             const host = document.getElementById('verifai-popup-root');
             if (host) {
                 const shadow = host.shadowRoot;
-                const preview = shadow.getElementById('preview-verdict');
-                if (preview) preview.textContent = 'Verification failed';
+                const popup = shadow.querySelector('.verifai-popup');
+                popup.classList.add('expanded');
+
+                const rating = (response.data.rating || response.data.verdict || 'unverified').toLowerCase().replace(/\\s+/g, '_');
+                popup.classList.add('verdict-' + rating);
+
+                const confidence = Math.round((response.data.confidence || response.data.confidence_score || 0) * 100);
+                const fill = shadow.querySelector('.bar-fill');
+                if (fill) fill.style.width = confidence + '%';
+
+                const verdictPreview = shadow.querySelector('.verdict-preview') || shadow.querySelector('.preview-verdict');
+                if (verdictPreview) {
+                    verdictPreview.textContent = rating.toUpperCase();
+                    if (response.data.explanation_en) {
+                        verdictPreview.textContent += ': ' + response.data.explanation_en.substring(0, 40) + '...';
+                    }
+                }
+            } else {
+                show_verdict_panel(response.data);
             }
+        } else {
+            console.error("VerifAI: API match failed or backend is down.");
         }
     });
+    return true;
 }
 
-function updateExpandedPopup(data) {
-    const host = document.getElementById('verifai-popup-root');
-    if (!host) {
-        show_verdict_panel(data);
-        return;
-    }
-    const shadow = host.shadowRoot;
-    const popup = shadow.querySelector('.verifai-popup');
-    popup.classList.add('expanded');
-
-    const rating = (data.rating || data.verdict || 'unverified').toLowerCase().replace(/\s+/g, '_');
-    popup.classList.add(`verdict-${rating}`);
-
-    const confidence = Math.round((data.confidence || data.confidence_score || 0) * 100);
-    const fill = shadow.querySelector('.state-expanded .bar-fill') || shadow.getElementById('confidence-fill-expanded');
-    if (fill) fill.style.width = confidence + '%';
-
-    const confText = shadow.getElementById('confidence-text-expanded');
-    if (confText) confText.textContent = confidence + '%';
-
-    const verdictPreview = shadow.getElementById('verdict-preview-expanded') || shadow.querySelector('.state-expanded .verdict-preview');
-    if (verdictPreview) {
-        verdictPreview.textContent = data.rating || data.verdict || '-';
-        if (data.explanation_en) verdictPreview.textContent += ': ' + data.explanation_en.substring(0, 40) + '...';
-    }
-
-    // Listen for view panel
-    const viewHandler = () => {
-        show_verdict_panel(data);
-        hide_popup();
-    };
-    window.addEventListener('verifai:viewpanel', viewHandler, { once: true });
-}
-
-function show_verdict_panel(data) {
-    if (document.getElementById('verifai-root')) return;
-
-    const host = document.createElement('div');
-    host.id = 'verifai-root';
-    host.style.position = 'fixed';
-    host.style.top = '20px';
-    host.style.right = '20px';
-    host.style.zIndex = '2147483647';
-    document.body.appendChild(host);
-
-    const shadow = host.attachShadow({ mode: 'open' });
-
-    Promise.all([
-        fetch(chrome.runtime.getURL('panel.html')).then(res => res.text()),
-        fetch(chrome.runtime.getURL('panel.css')).then(res => res.text())
-    ]).then(([html, css]) => {
-        const style = document.createElement('style');
-        style.textContent = css;
-
-        const container = document.createElement('div');
-        container.innerHTML = html;
-
-        shadow.appendChild(style);
-        shadow.appendChild(container);
-
-        update_panel_ui(shadow, data);
-    });
-}
-
-
-// panel.html, panel.css injection
 function show_verdict_panel(data) {
     if (document.getElementById('verifai-root')) return;
 
