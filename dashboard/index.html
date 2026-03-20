@@ -97,44 +97,58 @@
   </div>
 </div>
 
-<script>
-  const BASE_URL = "http://localhost:8000"
+<script><script>
+  const BASE_URL = "http://localhost:5173"; 
+
   async function updateDashboard() {
-    document.querySelector(".usage-today div[style]").innerText =
-      new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    // Update the date using ID
+    const dateDiv = document.getElementById("CURRENT-DATE");
+    if (dateDiv) {
+      dateDiv.innerText = new Date().toLocaleDateString("en-PH", { 
+        year: "numeric", 
+        month: "long", 
+        day: "numeric" 
+      });
+    }
 
     try {
-      const json   = await fetch(/backend/routers/dashboard.py).then(r => r.json())
-      const data   = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0)
-      const target = document.getElementById('G')
-      const yAxis  = document.querySelector('.y-axis')
+      // fetch API URL, not local file path.
+      // Ensure dashboard.py is running on same port.
+      const response = await fetch(`${BASE_URL}/dashboard/daily`);
+      const json = await response.json();
+      
+      const data = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0);
+      const target = document.getElementById('G');
+      const yAxis = document.getElementById('Y-AXIS');
 
-      const maxVal       = Math.max(...data)
-      const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10
+      const maxVal = Math.max(...data);
+      const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10;
 
-      target.innerHTML = ''
-      yAxis.innerHTML  = ''
+      target.innerHTML = '';
+      yAxis.innerHTML = '';
 
       for (let i = 0; i <= 4; i++) {
-        const val = Math.round((graphCeiling / 4) * i)
-        yAxis.insertAdjacentHTML('beforeend', <span>${val}</span>)
-        target.insertAdjacentHTML('beforeend',
-          <div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>)
+        const val = Math.round((graphCeiling / 4) * i);
+        yAxis.insertAdjacentHTML('beforeend', `<span>${val}</span>`);
+        target.insertAdjacentHTML('beforeend', 
+          `<div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>`);
       }
 
       data.forEach(val => {
-        const percentage = (val / graphCeiling) * 100
+        const percentage = (val / graphCeiling) * 100;
         target.insertAdjacentHTML('beforeend', `
           <div class="bar-group">
             <div class="bar-num">${val}h</div>
             <div class="bar" style="height: ${percentage}%"></div>
-          </div>`)
-      })
-    } catch (e) { console.warn("graph error:", e) }
+          </div>`);
+      });
+    } catch (e) { 
+      console.warn("Backend error: Make sure dashboard.py is running on port 8000", e); 
+    }
   }
 
-  updateDashboard()
-  setInterval(updateDashboard, 30000)
+  updateDashboard();
+  setInterval(updateDashboard, 30000);
 </script>
 
 </body>
