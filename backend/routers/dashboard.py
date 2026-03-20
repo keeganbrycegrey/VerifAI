@@ -8,6 +8,7 @@ from db.supabase_client import (
     get_trending_claims,
     get_verdict_counts,
     get_coverage_heatmap,
+    get_daily_usage,       
 )
 
 router = APIRouter()
@@ -41,5 +42,12 @@ async def get_trending():
 async def get_coverage():
     try:
         return await get_coverage_heatmap()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/daily")
+async def get_daily():
+    try:
+        return await get_daily_usage()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -151,3 +151,26 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
     except Exception as e:
         print(f"cache lookup error: {e}")
         return None
+    
+async def get_daily_usage() -> dict:
+    # returns check counts grouped by day of week (0=Sun, 6=Sat)
+    try:
+        res = (
+            _get_client().table("verdicts")
+            .select("timestamp")
+            .order("timestamp", desc=True)
+            .limit(500)
+            .execute()
+        )
+
+        daily: dict = defaultdict(int)
+        for row in res.data:
+            dt = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+            # convert weekday: python mon=0, we want sun=0
+            day = (dt.weekday() + 1) % 7
+            daily[str(day)] += 1
+
+        return {"daily": dict(daily)}
+    except Exception as e:
+        print(f"supabase daily error: {e}")
+        return {"daily": {}}
