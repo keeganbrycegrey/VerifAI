@@ -98,56 +98,43 @@
 </div>
 
 <script>
-  const BASE_URL = "http://localhost:8000";
+  const BASE_URL = "http://localhost:8000"
+  async function updateDashboard() {
+    document.querySelector(".usage-today div[style]").innerText =
+      new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
 
-async function updateDashboard() {
-  // Target by ID for better reliability
-  const dateElement = document.getElementById("CURRENT-DATE");
-  if (dateElement) {
-    dateElement.innerText = new Date().toLocaleDateString("en-PH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    });
+    try {
+      const json   = await fetch(${BASE_URL}/dashboard/daily).then(r => r.json())
+      const data   = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0)
+      const target = document.getElementById('G')
+      const yAxis  = document.querySelector('.y-axis')
+
+      const maxVal       = Math.max(...data)
+      const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10
+
+      target.innerHTML = ''
+      yAxis.innerHTML  = ''
+
+      for (let i = 0; i <= 4; i++) {
+        const val = Math.round((graphCeiling / 4) * i)
+        yAxis.insertAdjacentHTML('beforeend', <span>${val}</span>)
+        target.insertAdjacentHTML('beforeend',
+          <div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>)
+      }
+
+      data.forEach(val => {
+        const percentage = (val / graphCeiling) * 100
+        target.insertAdjacentHTML('beforeend', `
+          <div class="bar-group">
+            <div class="bar-num">${val}h</div>
+            <div class="bar" style="height: ${percentage}%"></div>
+          </div>`)
+      })
+    } catch (e) { console.warn("graph error:", e) }
   }
 
-  try {
-    // Fixed: Added backticks for the URL
-    const response = await fetch(`${BASE_URL}/dashboard/daily`);
-    const json = await response.json();
-    
-    const data = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0);
-    const target = document.getElementById('G');
-    const yAxis = document.getElementById('Y-AXIS'); // Used ID
-
-    const maxVal = Math.max(...data);
-    const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10;
-
-    target.innerHTML = '';
-    yAxis.innerHTML = '';
-
-    for (let i = 0; i <= 4; i++) {
-      const val = Math.round((graphCeiling / 4) * i);
-      // Fixed: Wrapped in backticks
-      yAxis.insertAdjacentHTML('beforeend', `<span>${val}</span>`);
-      target.insertAdjacentHTML('beforeend', `<div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>`);
-    }
-
-    data.forEach(val => {
-      const percentage = (val / graphCeiling) * 100;
-      target.insertAdjacentHTML('beforeend', `
-        <div class="bar-group">
-          <div class="bar-num">${val}h</div>
-          <div class="bar" style="height: ${percentage}%"></div>
-        </div>`);
-    });
-  } catch (e) { 
-    console.warn("graph error:", e); 
-  }
-}
-
-updateDashboard();
-setInterval(updateDashboard, 30000);
+  updateDashboard()
+  setInterval(updateDashboard, 30000)
 </script>
 
 </body>
