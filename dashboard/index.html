@@ -54,14 +54,14 @@
 <div class="dashboard-container">
   <div class="box usage-today">
     <h2>Today's Usage</h2>
-    <div class="big-number">5h 42m</div>
+    <div id="TODAY-VAL" class="big-number">No Data</div>
     <div id="CURRENT-DATE" style="color: #d1be94">Loading...</div>
   </div>
 
   <div class="box highest-usage">
     <h2>Highest Usage</h2>
-    <div class="big-number">9h 0m</div>
-    <div style="color: #d1be94">INSERT DATE</div>
+    <div id="HIGH-VAL" class="big-number">No Data</div>
+    <div id="HIGH-DATE" style="color: #d1be94">No Data</div>
   </div>
   
   <div class="box daily-usage">
@@ -76,17 +76,17 @@
 
   <div class="box bias-registry">
     <h2>Bias Registry</h2>
-    <div class="scroll-content">Registry data details here...</div>
+    <div class="scroll-content">No Data</div>
   </div>
 
   <div class="box verdict-feed">
     <h2>Verdict Feed</h2>
-    <div class="scroll-content">Case #1<br>Case #2</div>
+    <div id="VERDICT-LIST" class="scroll-content">No Data</div>
   </div>
 
   <div class="box trending-claims">
     <h2>Trending Claims</h2>
-    <div class="scroll-content">1. Example #1 </div>
+    <div id="TRENDING-LIST" class="scroll-content">No Data</div>
   </div>
 </div>
 
@@ -102,11 +102,27 @@
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/dashboard/daily`);
-      const json = await response.json();
-      const data = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0);
+      const feedRes = await fetch(`${BASE_URL}/dashboard/feed`);
+      const feed = await feedRes.json();
+
+      document.getElementById("TODAY-VAL").innerText = feed.total_checks_today || "No Data";
+      document.getElementById("HIGH-VAL").innerText = feed.total_checks_all_time || "No Data";
+      
+      const trendTarget = document.getElementById("TRENDING-LIST");
+      if (feed.trending && feed.trending.length > 0) {
+        trendTarget.innerHTML = feed.trending.map((t, i) => `<div>${i+1}. ${t}</div>`).join('');
+      } else {
+        trendTarget.innerText = "No Data";
+      }
+
+      const graphRes = await fetch(`${BASE_URL}/dashboard/daily`);
+      const graphJson = await graphRes.json();
+      
+      const data = Array.from({ length: 7 }, (_, i) => graphJson.daily?.[String(i)] || 0);
       const target = document.getElementById('G');
       const yAxis = document.getElementById('Y-AXIS');
+      
+      const allZero = data.every(v => v === 0);
       const maxVal = Math.max(...data);
       const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10;
 
@@ -121,13 +137,23 @@
       }
 
       data.forEach(val => {
-        const percentage = (val / graphCeiling) * 100;
+        let percentage, barColor;
+        
+        if (val === 0) {
+          percentage = 100; // Full bar
+          barColor = "rgba(255, 255, 255, 0.1)"; // Transparent white
+        } else {
+          percentage = (val / graphCeiling) * 100;
+          barColor = "#d1be94"; // Original gold
+        }
+
         target.insertAdjacentHTML('beforeend', `
           <div class="bar-group">
-            <div class="bar-num">${val}h</div>
-            <div class="bar" style="height: ${percentage}%"></div>
+            <div class="bar-num">${val > 0 ? val + 'h' : ''}</div>
+            <div class="bar" style="height: ${percentage}%; background-color: ${barColor}"></div>
           </div>`);
       });
+
     } catch (e) { 
       console.warn("API Error:", e); 
     }
