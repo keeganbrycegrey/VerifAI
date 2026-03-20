@@ -1,7 +1,9 @@
 let verifAI_panel   = null
 let verifAI_popup   = null
 let selectedClaim   = ''
-let _lastVerdictData = null  // stores verdict so panel can access it on viewpanel event
+let _lastVerdictData = null
+
+const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
 
 document.addEventListener('mouseup', () => {
     const selected_text = window.getSelection().toString().trim()
@@ -32,18 +34,14 @@ function show_popup() {
     Promise.all([
         fetch(chrome.runtime.getURL('popup.html')).then(r => r.text()),
         fetch(chrome.runtime.getURL('popup.css')).then(r => r.text()),
-        fetch(chrome.runtime.getURL('popup.js')).then(r => r.text()),
-    ]).then(([html, css, js]) => {
+    ]).then(([html, css]) => {
         const style           = document.createElement('style')
         style.textContent     = css
         const container       = document.createElement('div')
         container.innerHTML   = html
-        const script          = document.createElement('script')
-        script.textContent    = js
 
         shadow.appendChild(style)
         shadow.appendChild(container)
-        shadow.appendChild(script)
 
         verifAI_popup             = shadow
         host.style.pointerEvents  = 'auto'
@@ -57,11 +55,14 @@ function show_popup() {
                 : selectedClaim
         }
 
+        // wire up close button
+        const closeBtn = shadow.getElementById('verif-close')
+        if (closeBtn) closeBtn.onclick = () => hide_popup()
+
         window.addEventListener('verifai:factcheck',     () => request_verification(selectedClaim), { once: true })
         window.addEventListener('verifai:closepopup',    () => hide_popup(), { once: true })
         window.addEventListener('verifai:trashunderline', () => { removeUnderline(); hide_popup() }, { once: true })
         window.addEventListener('verifai:viewpanel', () => {
-            // use stored verdict data
             show_verdict_panel(_lastVerdictData)
             hide_popup()
         }, { once: true })
@@ -140,7 +141,6 @@ async function request_verification(text) {
 
     chrome.runtime.sendMessage({ action: "check_claim", content: text, type: "text" }, (response) => {
         if (response && response.status === "success") {
-            // store verdict data for the panel
             _lastVerdictData = response.data
 
             const host = document.getElementById('verifai-popup-root')
@@ -174,10 +174,8 @@ async function request_verification(text) {
     })
 }
 
-// handle context menu verdicts from background.js
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "SHOW_LOADING") {
-        // show panel in loading state
         show_verdict_panel(null)
     }
     if (message.type === "SHOW_VERDICT") {
@@ -191,7 +189,6 @@ chrome.runtime.onMessage.addListener((message) => {
 
 function show_verdict_panel(data, errorMsg) {
     if (document.getElementById('verifai-root')) {
-        // panel already open , just update it
         const existing = document.getElementById('verifai-root')
         update_panel_ui(existing.shadowRoot, data, errorMsg)
         return
@@ -216,7 +213,29 @@ function show_verdict_panel(data, errorMsg) {
         shadow.appendChild(style)
         shadow.appendChild(container)
 
-        // listen for close event from panel
+        // wire up panel buttons directly — inline scripts don't run inside innerHTML
+        const closeBtn = shadow.getElementById('verif-close')
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                const el = document.getElementById('verifai-root')
+                if (el) el.remove()
+            }
+        }
+
+        const checkerBtn = shadow.getElementById('btn-checker')
+        const historyBtn = shadow.getElementById('btn-history')
+        if (checkerBtn) checkerBtn.onclick = () => _switchTab(shadow, 'checker')
+        if (historyBtn) historyBtn.onclick = () => _switchTab(shadow, 'history')
+
+        const copyBtn = shadow.querySelector('.action-btn')
+        if (copyBtn) copyBtn.onclick = () => _copyResults(shadow)
+
+        const dashBtn = shadow.querySelector('.nav-dash')
+        if (dashBtn) dashBtn.onclick = () => chrome.tabs.create({ url: DASHBOARD_URL })
+
+        const reportBtn = shadow.querySelectorAll('.action-btn')[1]
+        if (reportBtn) reportBtn.onclick = () => alert("Thank you for the report. This will help us improve VerifAI.")
+
         window.addEventListener('verifai:closepanel', () => {
             const el = document.getElementById('verifai-root')
             if (el) el.remove()
@@ -224,6 +243,20 @@ function show_verdict_panel(data, errorMsg) {
 
         update_panel_ui(shadow, data, errorMsg)
     })
+}
+
+// panel helper functions — run in content.js context, not inline
+function _switchTab(shadow, tab) {
+    shadow.getElementById('tab-checker').classList.toggle('hidden', tab !== 'checker')
+    shadow.getElementById('tab-history').classList.toggle('hidden', tab !== 'history')
+    shadow.getElementById('btn-checker').classList.toggle('active', tab === 'checker')
+    shadow.getElementById('btn-history').classList.toggle('active', tab === 'history')
+}
+
+function _copyResults(shadow) {
+    const v = shadow.getElementById('verif-verdict').innerText
+    const e = shadow.getElementById('verif-explanation-en').innerText
+    navigator.clipboard.writeText(`VerifAI Verdict: ${v}\n${e}`)
 }
 
 function update_panel_ui(shadow, data, errorMsg) {
@@ -252,9 +285,4 @@ function update_panel_ui(shadow, data, errorMsg) {
     if (source_el)     source_el.innerText     = `Source: ${sourceUrl}`
     if (explanation_en) explanation_en.innerText = data.explanation_en || ''
     if (explanation_tl) explanation_tl.innerText = data.explanation_tl || ''
-
-    const close_btn = shadow.getElementById('verif-close')
-    if (close_btn) {
-        close_btn.onclick = () => window.dispatchEvent(new CustomEvent('verifai:closepanel'))
-    }
 }
