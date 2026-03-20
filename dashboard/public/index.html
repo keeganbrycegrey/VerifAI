@@ -1,44 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard</title>
-<link rel="stylesheet" href="index.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #121212; color: white; font-family: Cambria, serif; padding: 20px; }
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: 18% 28% 18% 1fr;  
+    grid-template-rows: 140px 140px auto; 
+    gap: 12px;
+    height: 90vh;
+  }
+
+  .box {
+    background: #1e1e1e;
+    border: 1px solid rgba(209, 180, 148, 0.2);
+    border-radius: 0px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .usage-today { grid-column: 1; grid-row: 1; }
+  .highest-usage { grid-column: 1; grid-row: 2; }
+  .daily-usage { grid-column: 2; grid-row: 1 / span 2; }
+  .bias-registry { grid-column: 3; grid-row: 1 / span 2; }
+  .verdict-feed { grid-column: 4; grid-row: 1 / span 3; }
+  .trending-claims { grid-column: 1 / span 3; grid-row: 3; }
+
+  h2 { font-size: 18px; color: #ffffff; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+  .big-number { font-size: 48px; color: #d1be94; font-weight: bold; margin: 0px 0; }
+  .scroll-content { flex-grow: 1; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; font-size: 13px; color: #a0a0a0; overflow-y: auto; }
+
+  .graph-frame { display: flex; align-items: flex-end; height: 100%; position: relative; margin-top: auto; }
+  .y-axis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 100%; padding-top: 20px; padding-bottom: 0px; padding-right: 10px; font-size: 10px; color: #666; }
+  
+  .graph-body { 
+    flex-grow: 1; 
+    height: 180px;
+    background: rgba(255,255,255,0.03); 
+    display: flex; 
+    align-items: flex-end; 
+    justify-content: space-around; 
+    padding: 5px 5px; 
+    position: relative; 
+  }
+  
+  .bar-group { display: flex; flex-direction: column; align-items: center; width: 25px; z-index: 2; height: 100%; justify-content: flex-end; }
+  .bar-num { font-size: 12px; margin-bottom: 0px; color: #d1be94; font-weight: bold; }
+  .bar { width: 100%; background: #d1be94; border-radius: 4px 4px 0 0; transition: height 0.3s ease; }
+  
+  .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,0.1); z-index: 1; width: 100%; }
+  .x-axis { display: flex; justify-content: space-around; padding-left: 25px; padding-right: 5px; margin-top: 5px; font-size: 12px; color: #666; }
+</style>
 </head>
 <body>
-<main class="container">
 
-  <section class="top-row">
-    <div class="box usage-day">
-      <h2>DAILY USAGE</h2>
-      <div class="date">DATE</div>
-      <div class="hours_and_minutes">0h 0m</div>
+<div class="dashboard-container">
+  
+  <div class="box usage-today">
+    <h2>Today's Usage</h2>
+    <div class="big-number">5h 42m</div>
+    <div style="color: #d1be94">March 20, 2026</div>
+  </div>
+
+  <div class="box highest-usage">
+    <h2>Highest Usage</h2>
+    <div class="big-number">9h 0m</div>
+  </div>
+  
+  <div class="box daily-usage">
+    <h2>Daily Usage</h2>
+    <div class="graph-frame">
+      <div class="y-axis"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+      <div class="graph-body" id="G">
+          <div class="grid-line" style="bottom: 20%;"></div>
+          <div class="grid-line" style="bottom: 40%;"></div>
+          <div class="grid-line" style="bottom: 60%;"></div>
+          <div class="grid-line" style="bottom: 80%;"></div>
+          <div class="grid-line" style="bottom: 100%;"></div>
+      </div>
     </div>
+    <div class="x-axis"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+  </div>
 
-    <div class="box weekly-graph">
-      <h2>WEEKLY USAGE</h2>
-      <div class="graph" aria-label="Weekly usage graph"></div>
-    </div>
+  <div class="box bias-registry">
+    <h2>Bias Registry</h2>
+    <div class="scroll-content">Registry data details here...</div>
+  </div>
 
-    <div class="box bias">
-      <h2>BIAS REGISTRY</h2>
-      <div class="content">No biases recorded</div>
-    </div>
-  </section>
+  <div class="box verdict-feed">
+    <h2>Verdict Feed</h2>
+    <div class="scroll-content">Case #1<br>Case #2</div>
+  </div>
 
-  <section class="bottom-row">
-    <div class="box column">
-      <h2>VERDICT FEED</h2>
-      <div class="content">No verdicts yet</div>
-    </div>
+  <div class="box trending-claims">
+    <h2>Trending Claims</h2>
+    <div class="scroll-content">1. Example #1 </div>
+  </div>
+</div>
 
-    <div class="box column">
-      <h2>TRENDING CLAIMS</h2>
-      <div class="content">No claims yet</div>
-    </div>
-  </section>
+<script>
+  const data = [4, 7, 2, 9, 5, 8, 3]; 
+  const target = document.getElementById('G');
 
-</main>
+  data.forEach(val => {
+    const group = document.createElement('div');
+    group.className = 'bar-group';
+    group.innerHTML = `
+      <div class="bar-num">${val}h</div>
+      <div class="bar" style="height: ${val * 10}%"></div>
+    `;
+    target.appendChild(group);
+  });
+</script>
+
 </body>
 </html>
