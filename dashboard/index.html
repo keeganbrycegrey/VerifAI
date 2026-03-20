@@ -104,11 +104,9 @@
     try {
       const response = await fetch(`${BASE_URL}/dashboard/daily`);
       const json = await response.json();
-      
       const data = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0);
       const target = document.getElementById('G');
       const yAxis = document.getElementById('Y-AXIS');
-
       const maxVal = Math.max(...data);
       const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10;
 
