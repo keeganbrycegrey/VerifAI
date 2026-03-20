@@ -1,70 +1,70 @@
-import React, { useEffect, useState } from 'react';
-import { getTrendingClaims } from '../api/client';
+import React, { useEffect, useState } from 'react'
+import { getTrendingClaims } from '../api/client'
+
+const RATING_COLOR = {
+    true:          'text-green-600',
+    false:         'text-red-500',
+    misleading:    'text-amber-500',
+    unverified:    'text-slate-400',
+    needs_context: 'text-blue-500',
+}
 
 export default function TrendingClaims() {
-    const [claims, setClaims] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [claims, setClaims]   = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError]     = useState(null)
 
     useEffect(() => {
-        let cancelled = false;
-
-        async function loadTrending() {
-            setLoading(true);
-            setError(null);
+        let cancelled = false
+        async function load() {
+            setLoading(true); setError(null)
             try {
-                const data = await getTrendingClaims();
-                if (!cancelled) setClaims(data);
+                const data = await getTrendingClaims()
+                if (!cancelled) setClaims(data)
             } catch (err) {
-                if (!cancelled) setError(err.message || 'Failed to load trending claims');
+                if (!cancelled) setError(err.message || 'Failed to load.')
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!cancelled) setLoading(false)
             }
         }
+        load()
+        return () => { cancelled = true }
+    }, [])
 
-        loadTrending();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    if (loading) {
-        return <div className="p-10 text-slate-600">Loading trending claims…</div>;
-    }
-
-    if (error) {
-        return <div className="p-10 text-red-600">Error loading trending claims: {error}</div>;
-    }
-
-    if (claims.length === 0) {
-        return <div className="p-10 text-slate-600">No trending claims yet.</div>;
-    }
+    if (loading) return <div className="p-10 text-slate-400">Loading trending claims...</div>
+    if (error)   return <div className="p-10 text-red-500">Error: {error}</div>
+    if (claims.length === 0) return <div className="p-10 text-slate-400">No trending claims yet.</div>
 
     return (
         <div className="p-10">
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">Most-Checked Claims</h2>
-            <div className="space-y-4">
-                {claims.map((item) => {
-                    const validity = item.validity_index ?? (item.check_count ? Math.min(1, item.check_count / 20) : 0.4);
-                    const explanation = item.explanation || 'No explanation available yet.';
-
+            <h2 className="text-2xl font-semibold text-slate-800 mb-6">Trending Claims</h2>
+            <div className="space-y-3">
+                {claims.map((item, i) => {
+                    const color = RATING_COLOR[item.dominant_rating] || 'text-slate-400'
                     return (
                         <article
                             key={`${item.claim}-${item.first_seen}`}
-                            className="rounded-xl border border-slate-200 p-4 bg-white shadow-sm"
+                            className="rounded-xl border border-slate-200 p-4 bg-white shadow-sm flex gap-4"
                         >
-                            <h3 className="font-semibold text-slate-800">{item.claim}</h3>
-                            <div className="mt-1 text-xs text-slate-500">
-                                Checked {item.check_count} times · Verdict: {item.dominant_rating?.toUpperCase() || 'N/A'}
+                            <span className="text-2xl font-black text-slate-200 w-8 shrink-0 leading-none pt-1">{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-800 text-sm leading-snug">{item.claim}</p>
+                                <div className="mt-1 flex gap-4 text-xs">
+                                    <span className="text-slate-400">Checked {item.check_count}×</span>
+                                    <span className={`font-semibold ${color}`}>
+                                        {item.dominant_rating?.replace('_', ' ').toUpperCase() || 'N/A'}
+                                    </span>
+                                </div>
+                                <div className="mt-1 text-xs text-slate-400">
+                                    First seen: {item.first_seen ? new Date(item.first_seen).toLocaleDateString('en-PH') : 'N/A'}
+                                    &nbsp;·&nbsp;
+                                    Last seen: {item.last_seen ? new Date(item.last_seen).toLocaleDateString('en-PH') : 'N/A'}
+                                </div>
                             </div>
-                            <div className="mt-2 text-sm text-slate-700">Validity index: {(validity * 100).toFixed(0)}%</div>
-                            <div className="mt-2 text-sm text-slate-600">{explanation}</div>
-                            <div className="mt-2 text-xs text-slate-400">First seen: {item.first_seen ? new Date(item.first_seen).toLocaleDateString() : 'N/A'} · Last seen: {item.last_seen ? new Date(item.last_seen).toLocaleDateString() : 'N/A'}</div>
                         </article>
-                    );
+                    )
                 })}
             </div>
         </div>
-    );
+    )
 }
-

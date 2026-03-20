@@ -10,7 +10,6 @@ from config import get_settings
 
 settings = get_settings()
 
-# lazy init — avoids crash if credentials not yet set
 _supabase: Client | None = None
 
 
@@ -25,19 +24,22 @@ def _get_client() -> Client:
 
 async def save_verdict(verdict: Verdict) -> None:
     try:
-        _get_client().table("verdicts").insert({
-            "claim":          verdict.claim,
-            "rating":         verdict.rating,
-            "confidence":     verdict.confidence,
-            "explanation_en": verdict.explanation_en,
-            "explanation_tl": verdict.explanation_tl,
-            "sources":        verdict.sources,
-            "input_type":     verdict.input_type,
-            "source_surface": verdict.source_surface,
-            "timestamp":      verdict.timestamp,
-            "coverage":       verdict.coverage.model_dump(),
-            "fact_checks":    [fc.model_dump() for fc in verdict.fact_checks_found],
-        }).execute()
+        row = {
+            "claim":              verdict.claim,
+            "rating":             verdict.rating,
+            "confidence":         verdict.confidence,
+            "explanation_en":     verdict.explanation_en,
+            "explanation_tl":     verdict.explanation_tl,
+            "sources":            verdict.sources,
+            "input_type":         verdict.input_type,
+            "source_surface":     verdict.source_surface,
+            "timestamp":          verdict.timestamp,
+            "coverage":           verdict.coverage.model_dump(),
+            "fact_checks":        [fc.model_dump() for fc in verdict.fact_checks_found],
+            "trace":              verdict.trace.model_dump() if verdict.trace else None,
+            "source_credibility": [sc.model_dump() for sc in verdict.source_credibility],
+        }
+        _get_client().table("verdicts").insert(row).execute()
     except Exception as e:
         print(f"supabase save error: {e}")
 
@@ -110,19 +112,17 @@ async def get_coverage_heatmap() -> dict:
             .limit(100)
             .execute()
         )
-
         outlet_counts: dict = defaultdict(int)
         for row in res.data:
             for outlet in row.get("coverage", {}).get("covering", []):
                 outlet_counts[outlet.get("outlet", "")] += 1
-
         return {"outlet_frequency": dict(outlet_counts)}
     except Exception as e:
         print(f"supabase heatmap error: {e}")
         return {"outlet_frequency": {}}
 
+
 async def get_cached_verdict(claim_text: str) -> Verdict | None:
-    # normalize claim for matching
     try:
         res = (
             _get_client().table("verdicts")
@@ -132,28 +132,35 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
             .limit(1)
             .execute()
         )
-        if res.data:
-            row = res.data[0]
-            return Verdict(
-                claim=row["claim"],
-                rating=row["rating"],
-                confidence=row["confidence"],
-                explanation_en=row["explanation_en"],
-                explanation_tl=row["explanation_tl"],
-                sources=row["sources"],
-                fact_checks_found=[FactCheckMatch(**fc) for fc in row["fact_checks"]],
-                coverage=CoverageReport(**row["coverage"]),
-                input_type=row["input_type"],
-                source_surface=row["source_surface"],
-                timestamp=row["timestamp"],
-            )
-        return None
+        if not res.data:
+            return None
+
+        row = res.data[0]
+
+        # trace and source_credibility may not exist in older DB rows
+        # Verdict model has Optional defaults so this is safe
+        return Verdict(
+            claim=row["claim"],
+            rating=row["rating"],
+            confidence=row["confidence"],
+            explanation_en=row["explanation_en"],
+            explanation_tl=row["explanation_tl"],
+            sources=row["sources"] or [],
+            fact_checks_found=[FactCheckMatch(**fc) for fc in (row.get("fact_checks") or [])],
+            coverage=CoverageReport(**row["coverage"]),
+            trace=None,              # old rows won't have this — pipeline will regenerate if needed
+            source_credibility=[],   # same
+            input_type=row["input_type"],
+            source_surface=row["source_surface"],
+            timestamp=row["timestamp"],
+        )
     except Exception as e:
         print(f"cache lookup error: {e}")
         return None
-    
+
+
 async def get_daily_usage() -> dict:
-    # returns check counts grouped by day of week (0=Sun, 6=Sat)
+    # check counts grouped by day of week (0=Sun, 6=Sat)
     try:
         res = (
             _get_client().table("verdicts")
@@ -162,14 +169,11 @@ async def get_daily_usage() -> dict:
             .limit(500)
             .execute()
         )
-
         daily: dict = defaultdict(int)
         for row in res.data:
-            dt = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
-            # convert weekday: python mon=0, we want sun=0
-            day = (dt.weekday() + 1) % 7
+            dt  = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+            day = (dt.weekday() + 1) % 7   # python mon=0 → sun=0
             daily[str(day)] += 1
-
         return {"daily": dict(daily)}
     except Exception as e:
         print(f"supabase daily error: {e}")

@@ -7,11 +7,13 @@ from functools import lru_cache
 
 # rss feeds outside settings — complex dicts break pydantic-settings
 RSS_FEEDS: dict[str, str] = {
-    "Rappler":        "https://www.rappler.com/feed",
-    "GMA News":       "https://data.gmanews.tv/gno/rss/news/feed.xml",
-    "Inquirer":       "https://newsinfo.inquirer.net/feed",
-    "PNA":            "https://www.pna.gov.ph/latest.rss",
-    "Google News PH": "https://news.google.com/rss?hl=en-PH&gl=PH&ceid=PH:en",
+    "Rappler":              "https://www.rappler.com/feed",
+    "GMA News":             "https://data.gmanews.tv/gno/rss/news/feed.xml",
+    "Inquirer":             "https://newsinfo.inquirer.net/feed",
+    "Philippine News Agency": "https://www.pna.gov.ph/latest.rss",
+    "Business Mirror":      "https://businessmirror.com.ph/feed",
+    "Eagle News":           "https://www.eaglenews.ph/feed",
+    "Google News PH":       "https://news.google.com/rss?hl=en-PH&gl=PH&ceid=PH:en",
 }
 
 class Settings(BaseSettings):

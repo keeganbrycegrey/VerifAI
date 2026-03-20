@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VerifAI Popup</title>
   <style>
     body {
       width: 320px;
       margin: 0;
       font-family: -apple-system, Cambria, serif;
-      background-color: #121212; 
+      background-color: #121212;
       color: #ffffff;
       overflow: hidden;
     }
@@ -29,9 +27,9 @@
       justify-content: space-between;
       align-items: center;
     }
-    .verifai-title { font-size: 18px; font-weight: 800; }
+    .verifai-title   { font-size: 18px; font-weight: 800; }
     .verifai-subtitle { font-size: 10px; text-transform: uppercase; font-weight: 700; opacity: 0.8; }
-    .verif-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #1e1e1e; }
+    .verif-close     { background: none; border: none; font-size: 20px; cursor: pointer; color: #1e1e1e; }
     .verifai-nav {
       display: flex;
       background: #111;
@@ -43,25 +41,26 @@
     .nav-btn {
       background: none; border: none; color: #888; font-size: 11px;
       cursor: pointer; padding: 12px 0; transition: 0.2s;
-      text-transform: uppercase; font-weight: bold; border-bottom: 2px solid transparent;
+      text-transform: uppercase; font-weight: bold;
+      border-bottom: 2px solid transparent;
     }
     .nav-btn.active { color: #d1be94; border-bottom: 2px solid #d1be94; }
-    .nav-dash { margin-left: auto; font-size: 18px; color: #888; text-decoration: none; cursor: pointer; }
+    .nav-dash { margin-left: auto; font-size: 18px; color: #888; cursor: pointer; text-decoration: none; }
     .nav-dash:hover { color: #d1be94; }
-    .tab-content { padding: 16px; }
-    .hidden { display: none; }
-    .verifai-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+    .tab-content  { padding: 16px; }
+    .hidden       { display: none; }
+    .verifai-row  { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
     .verifai-label { font-weight: 600; color: #aaa; font-size: 13px; }
-    .verifai-value { font-weight: 700; font-size: 13px; color: #d1be94; }    
+    .verifai-value { font-weight: 700; font-size: 13px; color: #d1be94; }
     .verifai-explanation-label { font-size: 11px; font-weight: 700; color: #d1be94; margin: 12px 0 4px; }
-    .verifai-explanation-value { 
-      font-size: 12px; 
-      line-height: 1;
-      color: #1e1e1e; 
-      background: #fff; 
-      padding: 8px 10px; 
-      border-radius: 6px; 
-      height: 34px;
+    .verifai-explanation-value {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #1e1e1e;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      max-height: 60px;
       overflow-y: auto;
       word-wrap: break-word;
     }
@@ -74,8 +73,12 @@
       font-weight: bold; text-transform: uppercase;
     }
     .action-btn:hover { background: #444; border-color: #d1be94; }
-    .history-item { background: #2a2a2a; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid #d1be94; }
-    .history-date { font-size: 10px; color: #888; margin-bottom: 4px; }
+    /* verdict colors */
+    .text-true          { color: #4ade80; }
+    .text-false         { color: #f87171; }
+    .text-misleading    { color: #fb923c; }
+    .text-unverified    { color: #94a3b8; }
+    .text-needs_context { color: #60a5fa; }
   </style>
 </head>
 <body>
@@ -85,62 +88,74 @@
         <div class="verifai-title">VerifAI</div>
         <div class="verifai-subtitle">Fact Checker</div>
       </div>
-      <button class="verif-close" onclick="window.close()">×</button>
+      <!-- dispatches event to content.js — window.close() won't work in Shadow DOM -->
+      <button class="verif-close" id="verif-close">×</button>
     </div>
+
     <nav class="verifai-nav">
       <div class="nav-group">
         <button id="btn-checker" class="nav-btn active" onclick="switchTab('checker')">Checker</button>
         <button id="btn-history" class="nav-btn" onclick="switchTab('history')">History</button>
       </div>
-      <a class="nav-dash" title="Dashboard" onclick="openDashboard()">⊞</a>
+      <span class="nav-dash" title="Open Dashboard" onclick="openDashboard()">⊞</span>
     </nav>
+
     <div id="tab-checker" class="tab-content">
       <div class="verifai-row">
         <span class="verifai-label">Verdict:</span>
-        <span id="verif-verdict" class="verifai-value">Verified</span>
+        <span id="verif-verdict" class="verifai-value">—</span>
       </div>
       <div class="verifai-row">
         <span class="verifai-label">Confidence:</span>
-        <span id="verif-confidence" class="verifai-value">98%</span>
+        <span id="verif-confidence" class="verifai-value">—</span>
+      </div>
+      <div class="verifai-row">
+        <span class="verifai-label">Source:</span>
+        <span id="verif-source" class="verifai-value">—</span>
       </div>
       <div class="verifai-explanation-label">EXPLANATION (EN)</div>
-      <div id="verif-explanation-en" class="verifai-explanation-value">
-        SAMPLE TEXT
-      </div>
+      <div id="verif-explanation-en" class="verifai-explanation-value">—</div>
       <div class="verifai-explanation-label">PALIWANAG (TL)</div>
-      <div id="verif-explanation-tl" class="verifai-explanation-value">
-        HALIMBAWANG TEKSTO
-      </div>
+      <div id="verif-explanation-tl" class="verifai-explanation-value">—</div>
       <div class="verifai-actions">
-        <button class="action-btn" onclick="copyResults()"> Copy</button>
-        <button class="action-btn" onclick="reportError()"> Report</button>
+        <button class="action-btn" onclick="copyResults()">Copy</button>
+        <button class="action-btn" onclick="reportError()">Report</button>
       </div>
     </div>
+
     <div id="tab-history" class="tab-content hidden">
-      <div class="history-item">
-        <div class="history-date">Today, 2:45 PM</div>
-        <div>SAMPLE TEXT - <b style="color:#ff4d4d">False</b></div>
-      </div>
+      <p style="color:#666;font-size:12px">Previous checks will appear here.</p>
     </div>
   </div>
+
   <script>
     function switchTab(tab) {
-      document.getElementById('tab-checker').classList.toggle('hidden', tab !== 'checker');
-      document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history');
-      document.getElementById('btn-checker').classList.toggle('active', tab === 'checker');
-      document.getElementById('btn-history').classList.toggle('active', tab === 'history');
+      document.getElementById('tab-checker').classList.toggle('hidden', tab !== 'checker')
+      document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history')
+      document.getElementById('btn-checker').classList.toggle('active', tab === 'checker')
+      document.getElementById('btn-history').classList.toggle('active', tab === 'history')
     }
+
     function openDashboard() {
-      alert("Opening Dashboard...");
+      // open dashboard in a new tab via chrome.tabs API
+      chrome.tabs.create({ url: "http://localhost:8000/dashboard" })
     }
+
     function copyResults() {
-      const v = document.getElementById('verif-verdict').innerText;
-      navigator.clipboard.writeText(`VerifAI Verdict: ${v}`);
-      alert("Copied!");
+      const v = document.getElementById('verif-verdict').innerText
+      const e = document.getElementById('verif-explanation-en').innerText
+      navigator.clipboard.writeText(`VerifAI Verdict: ${v}\n${e}`)
     }
+
     function reportError() {
-      alert("Error reported.");
+      // placeholder - could link to a form
+      alert("Thank you for the report. This will help us improve VerifAI.")
     }
+
+    // close button - dispatches to content.js which removes the panel
+    document.getElementById('verif-close').addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('verifai:closepanel'))
+    })
   </script>
 </body>
 </html>
