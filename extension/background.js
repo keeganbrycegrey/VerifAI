@@ -1,4 +1,4 @@
-const API_BASE_URL = "RAILWAY_URL" 
+const API_BASE_URL = "verifai-production-4119.up.railway.app" 
 
 // register context menus on install
 chrome.runtime.onInstalled.addListener(() => {

@@ -1,4 +1,4 @@
-const BASE_URL = "RAILWAYURL"
+const BASE_URL = "verifai-production-4119.up.railway.app"
 
 export async function getDashboardFeed() {
     const res = await fetch(`${BASE_URL}/dashboard/feed`)
