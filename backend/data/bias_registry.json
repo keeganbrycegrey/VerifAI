@@ -1,5 +1,5 @@
 {
-  "_note": "hand-curated bias ratings for philippine news outlets with confirmed rss feeds. based on cmfr assessments and documented editorial patterns. values: left | center | right | state | aggregator",
+  "_note": "bias ratings for philippine news outlets with confirmed rss feeds. based on cmfr assessments and documented editorial patterns. values: left | center | right | state | aggregator",
   "_last_updated": "2026-03",
   "outlets": {
     "Rappler": {
