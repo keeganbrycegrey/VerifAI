@@ -1,45 +1,167 @@
-<div class="verifai-popup">
-  <!-- Minimal state -->
-  <div class="state-minimal">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerifAI Popup</title>
+  <style>
+    body {
+      width: 350px; 
+      margin: 0;
+      font-family: -apple-system, Cambria;
+      background-color: #f0f2f5;
+      color: #1e1e1e;
+    }
+
+    .verifai-panel {
+      background: #1e1e1e;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .verifai-header {
+      background: #d1be94; 
+      color: black;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .verifai-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .verifai-subtitle {
+      font-size: 11px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .verifai-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      line-height: 1;
+      transition: background 0.2s;
+    }
+
+    .verifai-close:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .verifai-body {
+      padding: 16px;
+    }
+
+    .verifai-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .verifai-label {
+      font-weight: 600;
+      color: white;
+      font-size: 14px;
+    }
+
+    .verifai-value {
+      font-weight: 700;
+      font-size: 14px;
+      color: #d1be94;
+    }
+
+    .verifai-explanation {
+      margin-top: 16px;
+    }
+
+    .verifai-explanation-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #d1be94;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+    }
+
+    .verifai-explanation-value {
+      font-size: 13px;
+      line-height: 1.5;
+      color: black;
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #d1be94;
+    }
+
+    .status-true { color: #28a745; }
+    .status-false { color: #dc3545; }
+  </style>
+</head>
+<body>
+
+  <div class="verifai-panel">
     <div class="verifai-header">
-      <div class="verifai-logo">VerifAI</div>
-      <button id="popup-close" class="verifai-close">×</button>
-    </div>
-    <div class="verifai-body">
-      <div class="verifai-text-preview" id="popup-text-preview">...</div>
-      <div class="confidence-shell">
-        <div class="confidence-bar">
-          <div class="bar-fill" id="confidence-fill"></div>
-        </div>
-        <div class="preview-verdict" id="preview-verdict">Select to verify</div>
+      <div>
+        <div class="verifai-title">VerifAI</div>
+        <div class="verifai-subtitle">Fact Checker</div>
       </div>
-      <div class="action-buttons">
-        <button id="trash-btn" class="trash-btn">🗑</button>
-        <button id="fact-check-btn" class="verifai-factcheck-btn">Check →</button>
+      <button id="verif-close" class="verifai-close" onclick="window.close()">×</button>
+    </div>
+
+    <div class="verifai-body">
+      <div class="verifai-row">
+        <span class="verifai-label">Verdict:</span>
+        <span id="verif-verdict" class="verifai-value status-true">Verified</span>
+      </div>
+      <div class="verifai-row">
+        <span class="verifai-label">Confidence:</span>
+        <span id="verif-confidence" class="verifai-value">98%</span>
+      </div>
+      <div class="verifai-row">
+        <span class="verifai-label">Source:</span>
+        <span id="verif-source" class="verifai-value">Official Records</span>
+      </div>
+
+      <div class="verifai-explanation">
+        <div class="verifai-explanation-label">Explanation (EN):</div>
+        <div id="verif-explanation-en" class="verifai-explanation-value">
+          The claim has been cross-referenced with official databases and found to be accurate as of March 2026.
+        </div>
+      </div>
+
+      <div class="verifai-explanation">
+        <div class="verifai-explanation-label">🇵🇭 Paliwanag (TL):</div>
+        <div id="verif-explanation-tl" class="verifai-explanation-value">
+          Ang pahayag ay napatunayang totoo matapos suriin ang mga opisyal na dokumento at ulat.
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Expanded state -->
-  <div class="state-expanded hidden">
-    <div class="verifai-header">
-      <div class="verifai-logo">VerifAI</div>
-      <button id="popup-close-expanded" class="verifai-close">×</button>
-    </div>
-    <div class="verifai-body">
-      <div class="verifai-text-preview" id="popup-text-preview-expanded">...</div>
-      <div class="confidence-shell">
-        <div class="confidence-label">Confidence</div>
-        <div class="confidence-bar">
-          <div class="bar-fill" id="confidence-fill-expanded"></div>
-        </div>
-        <div class="confidence-text" id="confidence-text-expanded">0%</div>
-      </div>
-      <div class="verdict-preview" id="verdict-preview-expanded">-</div>
-      <div class="action-buttons">
-        <button id="view-panel-btn" class="view-panel-btn">View Details →</button>
-        <button id="trash-btn-expanded" class="trash-btn">🗑</button>
-      </div>
-    </div>
-  </div>
-</div>
+  <script>
+    function updateVerdict(verdict, confidence, source) {
+      document.getElementById('verif-verdict').innerText = verdict;
+      document.getElementById('verif-confidence').innerText = confidence;
+      document.getElementById('verif-source').innerText = source;
+    }
+    
+    document.getElementById('verif-close').addEventListener('click', () => {
+      console.log("Popup would close here.");
+    });
+  </script>
+
+</body>
+</html>
