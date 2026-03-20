@@ -1,0 +1,45 @@
+<div class="verifai-popup">
+  <!-- Minimal state -->
+  <div class="state-minimal">
+    <div class="verifai-header">
+      <div class="verifai-logo">VerifAI</div>
+      <button id="popup-close" class="verifai-close">×</button>
+    </div>
+    <div class="verifai-body">
+      <div class="verifai-text-preview" id="popup-text-preview">...</div>
+      <div class="confidence-shell">
+        <div class="confidence-bar">
+          <div class="bar-fill" id="confidence-fill"></div>
+        </div>
+        <div class="preview-verdict" id="preview-verdict">Select to verify</div>
+      </div>
+      <div class="action-buttons">
+        <button id="trash-btn" class="trash-btn">🗑</button>
+        <button id="fact-check-btn" class="verifai-factcheck-btn">Check →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expanded state -->
+  <div class="state-expanded hidden">
+    <div class="verifai-header">
+      <div class="verifai-logo">VerifAI</div>
+      <button id="popup-close-expanded" class="verifai-close">×</button>
+    </div>
+    <div class="verifai-body">
+      <div class="verifai-text-preview" id="popup-text-preview-expanded">...</div>
+      <div class="confidence-shell">
+        <div class="confidence-label">Confidence</div>
+        <div class="confidence-bar">
+          <div class="bar-fill" id="confidence-fill-expanded"></div>
+        </div>
+        <div class="confidence-text" id="confidence-text-expanded">0%</div>
+      </div>
+      <div class="verdict-preview" id="verdict-preview-expanded">-</div>
+      <div class="action-buttons">
+        <button id="view-panel-btn" class="view-panel-btn">View Details →</button>
+        <button id="trash-btn-expanded" class="trash-btn">🗑</button>
+      </div>
+    </div>
+  </div>
+</div>
