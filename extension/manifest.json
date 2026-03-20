@@ -50,7 +50,8 @@
                 "panel.css",
                 "popup.html",
                 "popup.css",
-                "popup.js"
+                "popup.js",
+                "panel.js"
             ],
             "matches": ["<all_urls>"]
         }

@@ -12,7 +12,6 @@
       background-color: #f0f2f5;
       color: #1e1e1e;
     }
-
     .verifai-panel {
       background: #1e1e1e;
       border-radius: 12px;
@@ -20,7 +19,6 @@
       overflow: hidden;
       border: 1px solid #ddd;
     }
-
     .verifai-header {
       background: #d1be94; 
       color: black;
@@ -29,20 +27,17 @@
       justify-content: space-between;
       align-items: center;
     }
-
     .verifai-title {
       font-size: 20px;
       font-weight: 800;
       letter-spacing: 0.5px;
     }
-
     .verifai-subtitle {
       font-size: 11px;
       opacity: 0.9;
       text-transform: uppercase;
       font-weight: 600;
     }
-
     .verifai-close {
       background: rgba(255, 255, 255, 0.2);
       border: none;
@@ -55,38 +50,31 @@
       line-height: 1;
       transition: background 0.2s;
     }
-
     .verifai-close:hover {
       background: rgba(255, 255, 255, 0.4);
     }
-
     .verifai-body {
       padding: 16px;
     }
-
     .verifai-row {
       display: flex;
       justify-content: space-between;
       padding: 10px 0;
       border-bottom: 1px solid #f0f0f0;
     }
-
     .verifai-label {
       font-weight: 600;
       color: white;
       font-size: 14px;
     }
-
     .verifai-value {
       font-weight: 700;
       font-size: 14px;
       color: #d1be94;
     }
-
     .verifai-explanation {
       margin-top: 16px;
     }
-
     .verifai-explanation-label {
       font-size: 12px;
       font-weight: 700;
@@ -95,7 +83,6 @@
       display: flex;
       align-items: center;
     }
-
     .verifai-explanation-value {
       font-size: 13px;
       line-height: 1.5;
@@ -105,7 +92,6 @@
       border-radius: 8px;
       border-left: 4px solid #d1be94;
     }
-
     .status-true { color: #28a745; }
     .status-false { color: #dc3545; }
   </style>
@@ -118,7 +104,7 @@
         <div class="verifai-title">VerifAI</div>
         <div class="verifai-subtitle">Fact Checker</div>
       </div>
-      <button id="verif-close" class="verifai-close" onclick="window.close()">×</button>
+      <button id="verif-close" class="verifai-close">×</button>
     </div>
 
     <div class="verifai-body">
@@ -143,7 +129,7 @@
       </div>
 
       <div class="verifai-explanation">
-        <div class="verifai-explanation-label">🇵🇭 Paliwanag (TL):</div>
+        <div class="verifai-explanation-label">Paliwanag (TL):</div>
         <div id="verif-explanation-tl" class="verifai-explanation-value">
           Ang pahayag ay napatunayang totoo matapos suriin ang mga opisyal na dokumento at ulat.
         </div>
@@ -151,17 +137,6 @@
     </div>
   </div>
 
-  <script>
-    function updateVerdict(verdict, confidence, source) {
-      document.getElementById('verif-verdict').innerText = verdict;
-      document.getElementById('verif-confidence').innerText = confidence;
-      document.getElementById('verif-source').innerText = source;
-    }
-    
-    document.getElementById('verif-close').addEventListener('click', () => {
-      console.log("Popup would close here.");
-    });
-  </script>
-
+  <script src="popup.js"></script>
 </body>
 </html>
