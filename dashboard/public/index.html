@@ -29,12 +29,12 @@
   .verdict-feed { grid-column: 4; grid-row: 1 / span 3; }
   .trending-claims { grid-column: 1 / span 3; grid-row: 3; }
 
-  h2 { font-size: 18px; color: #ffffff; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+  h2 { font-size: 18px; color: #ffffff; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px; }
   .big-number { font-size: 48px; color: #d1be94; font-weight: bold; margin: 0px 0; }
   .scroll-content { flex-grow: 1; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; font-size: 13px; color: #a0a0a0; overflow-y: auto; }
 
   .graph-frame { display: flex; align-items: flex-end; height: 100%; position: relative; margin-top: auto; }
-  .y-axis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 100%; padding-top: 20px; padding-bottom: 0px; padding-right: 10px; font-size: 10px; color: #666; }
+  .y-axis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 100%; padding-top: 20px; padding-right: 10px; font-size: 10px; color: #666; width: 30px; }
   
   .graph-body { 
     flex-grow: 1; 
@@ -43,44 +43,40 @@
     display: flex; 
     align-items: flex-end; 
     justify-content: space-around; 
-    padding: 5px 5px; 
+    padding: 0 5px; 
     position: relative; 
+    border-bottom: 1px solid rgba(255,255,255,0.1);
   }
   
   .bar-group { display: flex; flex-direction: column; align-items: center; width: 25px; z-index: 2; height: 100%; justify-content: flex-end; }
-  .bar-num { font-size: 12px; margin-bottom: 0px; color: #d1be94; font-weight: bold; }
-  .bar { width: 100%; background: #d1be94; border-radius: 4px 4px 0 0; transition: height 0.3s ease; }
+  .bar-num { font-size: 11px; margin-bottom: 4px; color: #d1be94; font-weight: bold; }
+  .bar { width: 80%; background: #d1be94; border-radius: 2px 2px 0 0; transition: height 0.5s ease; }
   
-  .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,0.1); z-index: 1; width: 100%; }
-  .x-axis { display: flex; justify-content: space-around; padding-left: 25px; padding-right: 5px; margin-top: 5px; font-size: 12px; color: #666; }
+  .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,0.05); z-index: 1; width: 100%; }
+  .x-axis { display: flex; justify-content: space-around; padding-left: 40px; padding-right: 5px; margin-top: 8px; font-size: 12px; color: #666; }
 </style>
 </head>
 <body>
 
 <div class="dashboard-container">
-  
   <div class="box usage-today">
     <h2>Today's Usage</h2>
     <div class="big-number">5h 42m</div>
-    <div style="color: #d1be94">March 20, 2026</div>
+    <div id="CURRENT-DATE" style="color: #d1be94">Loading...</div>
   </div>
 
   <div class="box highest-usage">
     <h2>Highest Usage</h2>
     <div class="big-number">9h 0m</div>
+    <div style="color: #d1be94">INSERT DATE</div>
   </div>
   
   <div class="box daily-usage">
     <h2>Daily Usage</h2>
+    <div style="color: #d1be94">LAST 7 DAYS</div>
     <div class="graph-frame">
-      <div class="y-axis"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
-      <div class="graph-body" id="G">
-          <div class="grid-line" style="bottom: 20%;"></div>
-          <div class="grid-line" style="bottom: 40%;"></div>
-          <div class="grid-line" style="bottom: 60%;"></div>
-          <div class="grid-line" style="bottom: 80%;"></div>
-          <div class="grid-line" style="bottom: 100%;"></div>
-      </div>
+      <div class="y-axis" id="Y-AXIS"></div>
+      <div class="graph-body" id="G"></div>
     </div>
     <div class="x-axis"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
   </div>
@@ -102,18 +98,43 @@
 </div>
 
 <script>
-  const data = [4, 7, 2, 9, 5, 8, 3]; 
-  const target = document.getElementById('G');
+  const BASE_URL = "http://localhost:8000"
+  async function updateDashboard() {
+    document.querySelector(".usage-today div[style]").innerText =
+      new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
 
-  data.forEach(val => {
-    const group = document.createElement('div');
-    group.className = 'bar-group';
-    group.innerHTML = `
-      <div class="bar-num">${val}h</div>
-      <div class="bar" style="height: ${val * 10}%"></div>
-    `;
-    target.appendChild(group);
-  });
+    try {
+      const json   = await fetch(${BASE_URL}/dashboard/daily).then(r => r.json())
+      const data   = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0)
+      const target = document.getElementById('G')
+      const yAxis  = document.querySelector('.y-axis')
+
+      const maxVal       = Math.max(...data)
+      const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10
+
+      target.innerHTML = ''
+      yAxis.innerHTML  = ''
+
+      for (let i = 0; i <= 4; i++) {
+        const val = Math.round((graphCeiling / 4) * i)
+        yAxis.insertAdjacentHTML('beforeend', <span>${val}</span>)
+        target.insertAdjacentHTML('beforeend',
+          <div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>)
+      }
+
+      data.forEach(val => {
+        const percentage = (val / graphCeiling) * 100
+        target.insertAdjacentHTML('beforeend', `
+          <div class="bar-group">
+            <div class="bar-num">${val}h</div>
+            <div class="bar" style="height: ${percentage}%"></div>
+          </div>`)
+      })
+    } catch (e) { console.warn("graph error:", e) }
+  }
+
+  updateDashboard()
+  setInterval(updateDashboard, 30000)
 </script>
 
 </body>
