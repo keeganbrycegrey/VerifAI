@@ -73,7 +73,6 @@
       font-weight: bold; text-transform: uppercase;
     }
     .action-btn:hover { background: #444; border-color: #d1be94; }
-    /* verdict colors */
     .text-true          { color: #4ade80; }
     .text-false         { color: #f87171; }
     .text-misleading    { color: #fb923c; }
@@ -88,7 +87,6 @@
         <div class="verifai-title">VerifAI</div>
         <div class="verifai-subtitle">Fact Checker</div>
       </div>
-      <!-- dispatches event to content.js — window.close() won't work in Shadow DOM -->
       <button class="verif-close" id="verif-close">×</button>
     </div>
 
@@ -128,34 +126,6 @@
     </div>
   </div>
 
-  <script>
-    function switchTab(tab) {
-      document.getElementById('tab-checker').classList.toggle('hidden', tab !== 'checker')
-      document.getElementById('tab-history').classList.toggle('hidden', tab !== 'history')
-      document.getElementById('btn-checker').classList.toggle('active', tab === 'checker')
-      document.getElementById('btn-history').classList.toggle('active', tab === 'history')
-    }
-
-    function openDashboard() {
-      // open dashboard in a new tab via chrome.tabs API
-      chrome.tabs.create({ url: "http://localhost:8000/dashboard" })
-    }
-
-    function copyResults() {
-      const v = document.getElementById('verif-verdict').innerText
-      const e = document.getElementById('verif-explanation-en').innerText
-      navigator.clipboard.writeText(`VerifAI Verdict: ${v}\n${e}`)
-    }
-
-    function reportError() {
-      // placeholder - could link to a form
-      alert("Thank you for the report. This will help us improve VerifAI.")
-    }
-
-    // close button - dispatches to content.js which removes the panel
-    document.getElementById('verif-close').addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('verifai:closepanel'))
-    })
-  </script>
+  <script src="panel.js"></script>
 </body>
 </html>
