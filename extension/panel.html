@@ -13,7 +13,6 @@
       color: #ffffff;
       overflow: hidden;
     }
-
     .verifai-panel {
       width: 100%;
       background: #1e1e1e;
@@ -22,7 +21,6 @@
       display: flex;
       flex-direction: column;
     }
-
     .verifai-header {
       background: #d1be94;
       color: #1e1e1e;
@@ -34,7 +32,6 @@
     .verifai-title { font-size: 18px; font-weight: 800; }
     .verifai-subtitle { font-size: 10px; text-transform: uppercase; font-weight: 700; opacity: 0.8; }
     .verif-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #1e1e1e; }
-
     .verifai-nav {
       display: flex;
       background: #111;
@@ -57,7 +54,6 @@
     .verifai-label { font-weight: 600; color: #aaa; font-size: 13px; }
     .verifai-value { font-weight: 700; font-size: 13px; color: #d1be94; }    
     .verifai-explanation-label { font-size: 11px; font-weight: 700; color: #d1be94; margin: 12px 0 4px; }
-    
     .verifai-explanation-value { 
       font-size: 12px; 
       line-height: 1;
@@ -69,10 +65,8 @@
       overflow-y: auto;
       word-wrap: break-word;
     }
-
     .verifai-explanation-value::-webkit-scrollbar { width: 4px; }
     .verifai-explanation-value::-webkit-scrollbar-thumb { background: #d1be94; border-radius: 10px; }
-
     .verifai-actions { display: flex; gap: 8px; margin-top: 16px; }
     .action-btn {
       flex: 1; background: #333; border: 1px solid #444; color: white;
@@ -80,13 +74,11 @@
       font-weight: bold; text-transform: uppercase;
     }
     .action-btn:hover { background: #444; border-color: #d1be94; }
-
     .history-item { background: #2a2a2a; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid #d1be94; }
     .history-date { font-size: 10px; color: #888; margin-bottom: 4px; }
   </style>
 </head>
 <body>
-
   <div class="verifai-panel">
     <div class="verifai-header">
       <div>
@@ -95,7 +87,6 @@
       </div>
       <button class="verif-close" onclick="window.close()">×</button>
     </div>
-
     <nav class="verifai-nav">
       <div class="nav-group">
         <button id="btn-checker" class="nav-btn active" onclick="switchTab('checker')">Checker</button>
@@ -103,7 +94,6 @@
       </div>
       <a class="nav-dash" title="Dashboard" onclick="openDashboard()">⊞</a>
     </nav>
-
     <div id="tab-checker" class="tab-content">
       <div class="verifai-row">
         <span class="verifai-label">Verdict:</span>
@@ -113,35 +103,26 @@
         <span class="verifai-label">Confidence:</span>
         <span id="verif-confidence" class="verifai-value">98%</span>
       </div>
-
       <div class="verifai-explanation-label">EXPLANATION (EN)</div>
       <div id="verif-explanation-en" class="verifai-explanation-value">
-        This is a longer explanation that will scroll. You can add as much text as you want here and the box will remain exactly two lines tall. dion is gay, dion is gay, dion is gay
+        SAMPLE TEXT
       </div>
-
       <div class="verifai-explanation-label">PALIWANAG (TL)</div>
       <div id="verif-explanation-tl" class="verifai-explanation-value">
-        Ang paliwanag na ito ay pwedeng i-scroll. Hindi lalaki ang box na ito kahit gaano pa kahaba ang ilagay mong teksto rito. bading si dion, bading si dion, bading si dion
+        HALIMBAWANG TEKSTO
       </div>
-
       <div class="verifai-actions">
         <button class="action-btn" onclick="copyResults()"> Copy</button>
         <button class="action-btn" onclick="reportError()"> Report</button>
       </div>
     </div>
-
     <div id="tab-history" class="tab-content hidden">
       <div class="history-item">
         <div class="history-date">Today, 2:45 PM</div>
-        <div>"The moon is cheese" - <b style="color:#ff4d4d">False</b></div>
-        
-        <div class="history-date">Today, 7:45 PM</div>
-        <div>"Bading si dion" - <b style="color:green">True</b></div>
-
+        <div>SAMPLE TEXT - <b style="color:#ff4d4d">False</b></div>
       </div>
     </div>
   </div>
-
   <script>
     function switchTab(tab) {
       document.getElementById('tab-checker').classList.toggle('hidden', tab !== 'checker');
@@ -149,21 +130,17 @@
       document.getElementById('btn-checker').classList.toggle('active', tab === 'checker');
       document.getElementById('btn-history').classList.toggle('active', tab === 'history');
     }
-
     function openDashboard() {
       alert("Opening Dashboard...");
     }
-
     function copyResults() {
       const v = document.getElementById('verif-verdict').innerText;
       navigator.clipboard.writeText(`VerifAI Verdict: ${v}`);
       alert("Copied!");
     }
-
     function reportError() {
       alert("Error reported.");
     }
   </script>
-
 </body>
 </html>
