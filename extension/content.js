@@ -20,6 +20,7 @@ document.addEventListener('mouseup', () => {
 })
 
 function show_popup() {
+    try {
     if (verifAI_popup) hide_popup()
 
     const selection = window.getSelection()
@@ -73,7 +74,8 @@ function show_popup() {
             show_verdict_panel(_lastVerdictData)
             hide_popup()
         }, { once: true })
-    })
+    }).catch(() => {})
+    } catch (e) { if (e.message?.includes('context invalidated') || e.message?.includes('getURL')) return }
 }
 
 function hide_popup() {
@@ -203,6 +205,7 @@ if (chrome.runtime?.id) {
 }
 
 function show_verdict_panel(data, errorMsg) {
+    try {
     if (document.getElementById('verifai-root')) {
         const existing = document.getElementById('verifai-root')
         update_panel_ui(existing.shadowRoot, data, errorMsg)
@@ -258,7 +261,8 @@ function show_verdict_panel(data, errorMsg) {
         })
 
         update_panel_ui(shadow, data, errorMsg)
-    })
+    }).catch(() => {})
+    } catch (e) { if (e.message?.includes('context invalidated') || e.message?.includes('getURL')) return }
 }
 
 function _switchTab(shadow, tab) {
