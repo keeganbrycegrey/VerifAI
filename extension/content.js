@@ -6,10 +6,16 @@ let _lastVerdictData = null
 const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
 
 document.addEventListener('mouseup', () => {
-    const selected_text = window.getSelection().toString().trim()
-    if (selected_text.length > 100) {
-        selectedClaim = selected_text
-        show_popup()
+    try {
+        if (!chrome.runtime?.id) return  // extension context invalidated
+        const selected_text = window.getSelection().toString().trim()
+        if (selected_text.length > 100) {
+            selectedClaim = selected_text
+            show_popup()
+        }
+    } catch (e) {
+        if (e.message?.includes('Extension context invalidated')) return
+        console.error('VerifAI mouseup error:', e)
     }
 })
 
@@ -173,18 +179,26 @@ async function request_verification(text) {
     })
 }
 
-chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === "SHOW_LOADING") {
-        show_verdict_panel(null)
-    }
-    if (message.type === "SHOW_VERDICT") {
-        _lastVerdictData = message.verdict
-        show_verdict_panel(message.verdict)
-    }
-    if (message.type === "SHOW_ERROR") {
-        show_verdict_panel(null, message.message)
-    }
-})
+if (chrome.runtime?.id) {
+    chrome.runtime.onMessage.addListener((message) => {
+        try {
+            if (message.type === "SHOW_LOADING") {
+                show_verdict_panel(null)
+            }
+            if (message.type === "SHOW_VERDICT") {
+                _lastVerdictData = message.verdict
+                show_verdict_panel(message.verdict)
+            }
+            if (message.type === "SHOW_ERROR") {
+                show_verdict_panel(null, message.message)
+            }
+        } catch (e) {
+            if (!e.message?.includes('Extension context invalidated')) {
+                console.error('VerifAI message error:', e)
+            }
+        }
+    })
+}
 
 function show_verdict_panel(data, errorMsg) {
     if (document.getElementById('verifai-root')) {

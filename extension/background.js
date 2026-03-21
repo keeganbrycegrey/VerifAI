@@ -55,19 +55,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
 })
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action !== "check_claim") return false
-
-    _callBackend({
-        input_type: request.type || "text",
-        content: request.content,
-    })
-        .then(data => sendResponse({ status: "success", data }))
-        .catch(() => sendResponse({ status: "error", message: "Cannot connect to VerifAI server." }))
-
-    return true
-})
-
 async function _callBackend(payload) {
     const response = await fetch(`${API_BASE_URL}/check`, {
         method: "POST",
