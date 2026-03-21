@@ -23,7 +23,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 content = await _fetchImageAsBase64(info.srcUrl)
                 input_type = "image_base64"
             } catch {
-                // cors blocked — fall back to url
                 content = info.srcUrl
                 input_type = "url"
             }
@@ -52,7 +51,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 })
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action !== "check_claim") return
+    if (request.action !== "check_claim") return false
 
     _callBackend({
         input_type: request.type || "text",
@@ -61,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .then(data => sendResponse({ status: "success", data }))
         .catch(() => sendResponse({ status: "error", message: "Cannot connect to VerifAI server." }))
 
-    return true  
+    return true
 })
 
 async function _callBackend(payload) {
@@ -75,7 +74,29 @@ async function _callBackend(payload) {
         }),
     })
     if (!response.ok) throw new Error(`backend error: ${response.status}`)
-    return response.json()
+    const data = await response.json()
+    _saveVerdictToHistory(data)
+
+    return data
+}
+
+async function _saveVerdictToHistory(verdict) {
+    try {
+        const { history = [] } = await chrome.storage.local.get('history')
+        const entry = {
+            claim: verdict.claim,
+            rating: verdict.rating,
+            confidence: verdict.confidence,
+            explanation_en: verdict.explanation_en,
+            explanation_tl: verdict.explanation_tl,
+            timestamp: new Date().toISOString(),
+        }
+        history.unshift(entry)
+        if (history.length > 50) history.pop()
+        await chrome.storage.local.set({ history })
+    } catch (e) {
+        console.error('Failed to save to history:', e)
+    }
 }
 
 async function _fetchImageAsBase64(url) {
