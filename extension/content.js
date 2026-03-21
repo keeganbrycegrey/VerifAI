@@ -349,9 +349,9 @@ function update_panel_ui(shadow, data, errorMsg) {
     const confidence = Math.round((data.confidence ?? 0) * 100)
     const sourceUrl = (data.sources && data.sources[0]) || data.source_surface || 'VerifAI Cache'
 
-    const verdict_el = shadow.getElementById('verif-verdict')
-    const confidence_el = shadow.getElementById('verif-confidence')
-    const source_el = shadow.getElementById('verif-source')
+    const verdict_el     = shadow.getElementById('verif-verdict')
+    const confidence_el  = shadow.getElementById('verif-confidence')
+    const source_el      = shadow.getElementById('verif-source')
     const explanation_en = shadow.getElementById('verif-explanation-en')
     const explanation_tl = shadow.getElementById('verif-explanation-tl')
 
@@ -365,22 +365,24 @@ function update_panel_ui(shadow, data, errorMsg) {
     if (explanation_tl) explanation_tl.innerText = data.explanation_tl || ''
 
     // ── verdict trace ──────────────────────────────────────────────────────────
-    const traceSection = shadow.getElementById('verif-trace-section')
-    const traceStepsEl = shadow.getElementById('verif-trace-steps')
-    const traceSummary = shadow.getElementById('verif-trace-summary')
+    const traceSection  = shadow.getElementById('verif-trace-section')
+    const traceStepsEl  = shadow.getElementById('verif-trace-steps')
+    const traceSummary  = shadow.getElementById('verif-trace-summary')
 
     if (traceSection && data.trace && data.trace.steps && data.trace.steps.length > 0) {
         const weightClass = { high: 'weight-high', medium: 'weight-medium', low: 'weight-low' }
-        traceStepsEl.innerHTML = data.trace.steps.map(step =>
-            '<div class="trace-step">' +
-            '<span class="trace-icon">' + (step.icon || '🔹') + '</span>' +
-            '<div class="trace-body">' +
-            '<div class="trace-step-name">' + step.step + '</div>' +
-            '<div class="trace-finding">' + step.finding + '</div>' +
-            '</div>' +
-            '<span class="trace-weight ' + (weightClass[step.weight] || 'weight-medium') + '">' + step.weight + '</span>' +
-            '</div>'
-        ).join('')
+
+        traceStepsEl.innerHTML = data.trace.steps.map(step => `
+            <div class="trace-step">
+                <span class="trace-icon">${step.icon || '🔹'}</span>
+                <div class="trace-body">
+                    <div class="trace-step-name">${step.step}</div>
+                    <div class="trace-finding">${step.finding}</div>
+                </div>
+                <span class="trace-weight ${weightClass[step.weight] || 'weight-medium'}">${step.weight}</span>
+            </div>
+        `).join('')
+
         if (traceSummary) traceSummary.innerText = data.trace.summary || ''
         traceSection.style.display = 'block'
     } else if (traceSection) {
@@ -392,15 +394,24 @@ function update_panel_ui(shadow, data, errorMsg) {
     const credList    = shadow.getElementById('verif-cred-list')
 
     if (credSection && data.source_credibility && data.source_credibility.length > 0) {
-        const scoreColor = function(s) { return s >= 0.80 ? '#22c55e' : s >= 0.60 ? '#60a5fa' : s >= 0.40 ? '#fbbf24' : '#ef4444' }
-        credList.innerHTML = data.source_credibility.slice(0, 4).map(function(sc) {
-            return '<div class="cred-item" title="' + (sc.explanation || '') + '">' +
-            '<span class="cred-outlet">' + sc.outlet + '</span>' +
-            '<div class="cred-score-bar"><div class="cred-score-fill" style="width:' + Math.round(sc.score*100) + '%;background:' + scoreColor(sc.score) + '"></div></div>' +
-            '<span class="cred-pct">' + Math.round(sc.score*100) + '%</span>' +
-            '<span class="cred-badge cred-' + sc.classification + '">' + sc.classification.replace('_',' ') + '</span>' +
-            '</div>'
-        }).join('')
+        const scoreColor = (score) => {
+            if (score >= 0.80) return '#22c55e'
+            if (score >= 0.60) return '#60a5fa'
+            if (score >= 0.40) return '#fbbf24'
+            return '#ef4444'
+        }
+
+        credList.innerHTML = data.source_credibility.slice(0, 4).map(sc => `
+            <div class="cred-item" title="${sc.explanation || ''}">
+                <span class="cred-outlet">${sc.outlet}</span>
+                <div class="cred-score-bar">
+                    <div class="cred-score-fill" style="width:${Math.round(sc.score * 100)}%;background:${scoreColor(sc.score)}"></div>
+                </div>
+                <span class="cred-pct">${Math.round(sc.score * 100)}%</span>
+                <span class="cred-badge cred-${sc.classification}">${sc.classification.replace('_', ' ')}</span>
+            </div>
+        `).join('')
+
         credSection.style.display = 'block'
     } else if (credSection) {
         credSection.style.display = 'none'

@@ -5,7 +5,7 @@
 from collections import defaultdict, Counter
 from datetime import datetime, timezone
 from supabase import create_client, Client
-from models import Verdict, VerdictSummary, TrendingClaim, FactCheckMatch, CoverageReport
+from models import Verdict, VerdictSummary, TrendingClaim, FactCheckMatch, CoverageReport, VerdictTrace, VerdictStep, SourceCredibility
 from config import get_settings
 
 settings = get_settings()
@@ -148,8 +148,8 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
             sources=row["sources"] or [],
             fact_checks_found=[FactCheckMatch(**fc) for fc in (row.get("fact_checks") or [])],
             coverage=CoverageReport(**row["coverage"]),
-            trace=None,              # old rows won't have this — pipeline will regenerate if needed
-            source_credibility=[],   # same
+            trace=_build_trace_from_row(row),
+            source_credibility=_build_credibility_from_row(row),
             input_type=row["input_type"],
             source_surface=row["source_surface"],
             timestamp=row["timestamp"],
@@ -157,6 +157,67 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
     except Exception as e:
         print(f"cache lookup error: {e}")
         return None
+
+
+
+def _build_trace_from_row(row: dict) -> "VerdictTrace | None":
+    # rebuild trace from stored data if available, else build a minimal one
+    stored = row.get("trace")
+    if stored and stored.get("steps"):
+        try:
+            steps = [VerdictStep(**s) for s in stored["steps"]]
+            return VerdictTrace(steps=steps, summary=stored.get("summary", ""))
+        except Exception:
+            pass
+    # build minimal trace from what we have
+    steps = []
+    fact_checks = row.get("fact_checks") or []
+    coverage = row.get("coverage") or {}
+    if fact_checks:
+        sources = list({fc.get("source","") for fc in fact_checks[:3]})
+        steps.append(VerdictStep(
+            step="Fact Check Lookup",
+            finding=f"Found {len(fact_checks)} fact-check(s) from {', '.join(s for s in sources if s)}",
+            weight="high", icon="🔍",
+        ))
+    else:
+        steps.append(VerdictStep(
+            step="Fact Check Lookup",
+            finding="No existing fact-checks found in IFCN-certified sources",
+            weight="medium", icon="🔍",
+        ))
+    covering = coverage.get("covering", [])
+    if covering:
+        steps.append(VerdictStep(
+            step="Coverage Analysis",
+            finding=f"{len(covering)} outlet(s) found covering this story",
+            weight="medium", icon="📰",
+        ))
+    else:
+        steps.append(VerdictStep(
+            step="Coverage Analysis",
+            finding="No Philippine news outlets found covering this story",
+            weight="low", icon="📰",
+        ))
+    steps.append(VerdictStep(
+        step="AI Reasoning",
+        finding="Verdict derived from available evidence",
+        weight="high", icon="🤖",
+    ))
+    return VerdictTrace(
+        steps=steps,
+        summary=f"Verdict reached from {len(fact_checks)} fact-check(s) and {len(covering)} outlet(s).",
+    )
+
+
+def _build_credibility_from_row(row: dict) -> list:
+    stored = row.get("source_credibility")
+    if stored:
+        try:
+            return [SourceCredibility(**sc) for sc in stored]
+        except Exception:
+            pass
+    return []
 
 
 async def get_daily_usage() -> dict:
