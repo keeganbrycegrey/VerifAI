@@ -1,4 +1,4 @@
-const API_BASE_URL = "verifai-production-4119.up.railway.app" 
+const API_BASE_URL = "https://verifai-production-4119.up.railway.app"
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
