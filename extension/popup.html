@@ -5,134 +5,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VerifAI Popup</title>
   <style>
+    * { box-sizing: border-box; }
     body {
-      width: 350px; 
+      width: 360px;
       margin: 0;
-      font-family: -apple-system, Cambria;
-      background-color: #f0f2f5;
-      color: #1e1e1e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+      color: #e0e0e0;
     }
     .verifai-panel {
-      background: #1e1e1e;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
       overflow: hidden;
-      border: 1px solid #ddd;
+      border: 1px solid #2a2a2a;
+      margin: 8px;
     }
     .verifai-header {
-      background: #d1be94; 
-      color: black;
-      padding: 16px;
+      background: linear-gradient(135deg, #d1be94 0%, #c9b47a 100%);
+      color: #1a1a1a;
+      padding: 14px 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 2px 8px rgba(209, 190, 148, 0.1);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .verifai-icon {
+      width: 32px;
+      height: 32px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
     .verifai-title {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #1a1a1a;
     }
     .verifai-subtitle {
-      font-size: 11px;
-      opacity: 0.9;
-      text-transform: uppercase;
+      font-size: 10px;
+      opacity: 0.8;
       font-weight: 600;
+      margin-top: 2px;
+      color: #1a1a1a;
     }
     .verifai-close {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.1);
       border: none;
-      color: white;
+      color: #1a1a1a;
       font-size: 20px;
       cursor: pointer;
       width: 28px;
       height: 28px;
-      border-radius: 50%;
-      line-height: 1;
-      transition: background 0.2s;
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .verifai-close:hover {
-      background: rgba(255, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.2);
     }
     .verifai-body {
       padding: 16px;
     }
-    .verifai-row {
+    .verdict-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .verdict-row {
       display: flex;
       justify-content: space-between;
       padding: 10px 0;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid #2a2a2a;
     }
+    .verdict-row:last-child { border: none; }
     .verifai-label {
       font-weight: 600;
-      color: white;
-      font-size: 14px;
+      color: #aaa;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
     .verifai-value {
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       color: #d1be94;
     }
-    .verifai-explanation {
-      margin-top: 16px;
+    .confidence-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .confidence-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #d1be94;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .confidence-bar-container {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .confidence-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #d1be94 0%, #c9b47a 100%);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+    .confidence-percentage {
+      font-size: 11px;
+      font-weight: 700;
+      color: #d1be94;
+      text-align: right;
+    }
+    .explanation-section {
+      margin-top: 12px;
     }
     .verifai-explanation-label {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: #d1be94;
       margin-bottom: 6px;
-      display: flex;
-      align-items: center;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      display: block;
     }
     .verifai-explanation-value {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5;
-      color: black;
-      background: white;
-      padding: 12px;
+      color: #e0e0e0;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
       border-radius: 8px;
-      border-left: 4px solid #d1be94;
+      border-left: 3px solid #d1be94;
+      max-height: 70px;
+      overflow-y: auto;
     }
-    .status-true { color: #28a745; }
-    .status-false { color: #dc3545; }
+    .verifai-explanation-value::-webkit-scrollbar { width: 4px; }
+    .verifai-explanation-value::-webkit-scrollbar-thumb { background: #d1be94; border-radius: 2px; }
+
+    .status-true { color: #22c55e; }
+    .status-false { color: #ef4444; }
+    .status-misleading { color: #f97316; }
+    .status-needs_context { color: #3b82f6; }
+    .status-unverified { color: #94a3b8; }
   </style>
 </head>
 <body>
 
   <div class="verifai-panel">
     <div class="verifai-header">
-      <div>
-        <div class="verifai-title">VerifAI</div>
-        <div class="verifai-subtitle">Fact Checker</div>
+      <div class="header-left">
+        <img class="verifai-icon" src="icons/icon32.png" alt="VerifAI">
+        <div>
+          <div class="verifai-title">VerifAI</div>
+          <div class="verifai-subtitle">Fact Checker</div>
+        </div>
       </div>
-      <button id="verif-close" class="verifai-close">×</button>
+      <button id="verif-close" class="verifai-close">✕</button>
     </div>
 
     <div class="verifai-body">
-      <div class="verifai-row">
-        <span class="verifai-label">Verdict:</span>
-        <span id="verif-verdict" class="verifai-value status-true">Verified</span>
-      </div>
-      <div class="verifai-row">
-        <span class="verifai-label">Confidence:</span>
-        <span id="verif-confidence" class="verifai-value">98%</span>
-      </div>
-      <div class="verifai-row">
-        <span class="verifai-label">Source:</span>
-        <span id="verif-source" class="verifai-value">Official Records</span>
-      </div>
-
-      <div class="verifai-explanation">
-        <div class="verifai-explanation-label">Explanation (EN):</div>
-        <div id="verif-explanation-en" class="verifai-explanation-value">
-          The claim has been cross-referenced with official databases and found to be accurate as of March 2026.
+      <div class="verdict-card">
+        <div class="verdict-row">
+          <span class="verifai-label">Verdict</span>
+          <span id="verif-verdict" class="verifai-value">—</span>
+        </div>
+        <div class="verdict-row">
+          <span class="verifai-label">Confidence</span>
+          <span id="verif-confidence" class="verifai-value">—</span>
+        </div>
+        <div class="verdict-row">
+          <span class="verifai-label">Source</span>
+          <span id="verif-source" class="verifai-value">—</span>
         </div>
       </div>
 
-      <div class="verifai-explanation">
-        <div class="verifai-explanation-label">Paliwanag (TL):</div>
-        <div id="verif-explanation-tl" class="verifai-explanation-value">
-          Ang pahayag ay napatunayang totoo matapos suriin ang mga opisyal na dokumento at ulat.
+      <div class="confidence-section">
+        <label class="confidence-label">Confidence Level</label>
+        <div class="confidence-bar-container">
+          <div id="confidence-bar" class="confidence-bar" style="width: 0%"></div>
         </div>
+        <div id="confidence-percent" class="confidence-percentage">0%</div>
+      </div>
+
+      <div class="explanation-section">
+        <label class="verifai-explanation-label">Explanation (EN)</label>
+        <div id="verif-explanation-en" class="verifai-explanation-value">—</div>
+      </div>
+
+      <div class="explanation-section">
+        <label class="verifai-explanation-label">Paliwanag (TL)</label>
+        <div id="verif-explanation-tl" class="verifai-explanation-value">—</div>
       </div>
     </div>
   </div>
