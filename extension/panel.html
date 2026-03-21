@@ -317,6 +317,130 @@
     .rating-misleading { color: #f97316; }
     .rating-needs_context { color: #3b82f6; }
     .rating-unverified { color: #94a3b8; }
+
+    /* trace section */
+    .trace-section {
+      margin-bottom: 10px;
+    }
+    .trace-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #d1be94;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .trace-step {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 7px 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      margin-bottom: 5px;
+    }
+    .trace-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+    .trace-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .trace-step-name {
+      font-size: 9px;
+      font-weight: 700;
+      color: #d1be94;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+    .trace-finding {
+      font-size: 10px;
+      color: #ccc;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .trace-weight {
+      font-size: 8px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .weight-high   { background: rgba(34,197,94,0.15);  color: #22c55e; }
+    .weight-medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .weight-low    { background: rgba(148,163,184,0.15);color: #94a3b8; }
+    .trace-summary {
+      font-size: 10px;
+      color: #888;
+      font-style: italic;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 4px;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    /* source credibility section */
+    .cred-section {
+      margin-bottom: 10px;
+    }
+    .cred-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    .cred-outlet {
+      font-size: 10px;
+      font-weight: 600;
+      color: #ccc;
+      flex: 1;
+      min-width: 0;
+    }
+    .cred-score-bar {
+      width: 48px;
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .cred-score-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+    .cred-pct {
+      font-size: 9px;
+      color: #888;
+      width: 26px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .cred-badge {
+      font-size: 8px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .cred-highly_reliable    { background: rgba(34,197,94,0.15);   color: #22c55e; }
+    .cred-generally_reliable { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+    .cred-needs_context      { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .cred-state_media        { background: rgba(249,115,22,0.15);  color: #f97316; }
+    .cred-unreliable         { background: rgba(239,68,68,0.15);   color: #ef4444; }
   </style>
 </head>
 <body>
@@ -359,6 +483,19 @@
       <div class="explanation-section">
         <label class="explanation-label">Paliwanag (TL)</label>
         <div id="verif-explanation-tl" class="explanation-value">—</div>
+      </div>
+
+      <!-- reasoning trace — populated by content.js update_panel_ui -->
+      <div class="trace-section" id="verif-trace-section" style="display:none">
+        <label class="trace-label">🧠 How we got here</label>
+        <div id="verif-trace-steps"></div>
+        <div class="trace-summary" id="verif-trace-summary"></div>
+      </div>
+
+      <!-- source credibility — populated by content.js update_panel_ui -->
+      <div class="cred-section" id="verif-cred-section" style="display:none">
+        <label class="trace-label">📊 Source credibility</label>
+        <div id="verif-cred-list"></div>
       </div>
 
       <div class="action-group">
