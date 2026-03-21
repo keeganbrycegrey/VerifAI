@@ -37,6 +37,8 @@ function show_popup() {
 
     const shadow = host.attachShadow({ mode: 'open' })
 
+    if (!chrome.runtime?.id) { host.remove(); return }
+
     Promise.all([
         fetch(chrome.runtime.getURL('popup.html')).then(r => r.text()),
         fetch(chrome.runtime.getURL('popup.css')).then(r => r.text()),
@@ -213,6 +215,8 @@ function show_verdict_panel(data, errorMsg) {
     document.body.appendChild(host)
 
     const shadow = host.attachShadow({ mode: 'open' })
+
+    if (!chrome.runtime?.id) { host.remove(); return }
 
     Promise.all([
         fetch(chrome.runtime.getURL('panel.html')).then(r => r.text()),
