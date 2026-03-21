@@ -1,5 +1,18 @@
 const API_BASE_URL = "https://verifai-production-4119.up.railway.app"
 
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+        id: "check-image",
+        title: "VerifAI this image",
+        contexts: ["image"],
+    })
+    chrome.contextMenus.create({
+        id: "check-text",
+        title: "VerifAI this text",
+        contexts: ["selection"],
+    })
+})
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'open_tab') {
         chrome.tabs.create({ url: request.url })
