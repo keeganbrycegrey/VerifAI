@@ -229,7 +229,7 @@ function show_verdict_panel(data, errorMsg) {
         if (copyBtn) copyBtn.onclick = () => _copyResults(shadow)
 
         const dashBtn = shadow.querySelector('.nav-dash')
-        if (dashBtn) dashBtn.onclick = () => chrome.tabs.create({ url: DASHBOARD_URL })
+        if (dashBtn) dashBtn.onclick = () => chrome.runtime.sendMessage({ action: 'open_tab', url: DASHBOARD_URL })
 
         const reportBtn = shadow.getElementById('btn-report')
         if (reportBtn) reportBtn.onclick = () => alert("Thank you for the report. This will help us improve VerifAI.")
@@ -330,11 +330,11 @@ function _showDetailView(shadow, entry) {
     shadow.getElementById('detail-explanation-en').innerText = entry.explanation_en || '—'
     shadow.getElementById('detail-explanation-tl').innerText = entry.explanation_tl || '—'
     tabHistory.classList.add('hidden')
-    detailView.classList.remove('hidden') =
-        detailBackBtn.onclick = () => {
-            detailView.classList.add('hidden')
-            tabHistory.classList.remove('hidden')
-        }
+    detailView.classList.remove('hidden')
+    detailBackBtn.onclick = () => {
+        detailView.classList.add('hidden')
+        tabHistory.classList.remove('hidden')
+    }
 }
 
 function update_panel_ui(shadow, data, errorMsg) {
