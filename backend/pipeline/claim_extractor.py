@@ -15,6 +15,12 @@ _client: AsyncGroq | None = None
 def _groq() -> AsyncGroq:
     global _client
     if _client is None:
+        # avoid hanging pag error
+        if not settings.GROQ_API_KEY or settings.GROQ_API_KEY == "":
+            raise ValueError(
+                "GROQ_API_KEY is not configured in .env file. "
+                "Get your key from: https://console.groq.com/keys"
+            )
         _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
     return _client
 
