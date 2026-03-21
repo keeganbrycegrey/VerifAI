@@ -13,4 +13,7 @@ async def check_claim(request: CheckRequest) -> Verdict:
     try:
         return await run_pipeline(request)
     except Exception as e:
+        import traceback
+        print(f"Pipeline error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
