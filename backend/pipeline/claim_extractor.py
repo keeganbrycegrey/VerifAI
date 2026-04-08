@@ -1,60 +1,52 @@
 # extracts single verifiable claim from text
-# uses llama 3.3 with low temperature
-# ni hao fine shyt
+# uses gemini-1.5-flash with low temperature
 
 import json
-from groq import AsyncGroq
+import google.generativeai as genai
+from google.generativeai import types
 from models import PreprocessedInput, ExtractedClaim
 from config import get_settings
 
 settings = get_settings()
 
-# lazy init — avoids crash on empty key
-_client: AsyncGroq | None = None
+_model = None
 
-def _groq() -> AsyncGroq:
-    global _client
-    if _client is None:
-        # avoid hanging pag error
-        if not settings.GROQ_API_KEY or settings.GROQ_API_KEY == "":
+def _gemini():
+    global _model
+    if _model is None:
+        if not settings.GEMINI_API_KEY:
             raise ValueError(
-                "GROQ_API_KEY is not configured in .env file. "
-                "Get your key from: https://console.groq.com/keys"
+                "GEMINI_API_KEY is not configured in .env. "
+                "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-    return _client
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        _model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=(
+                "You are a fact-checking assistant specializing in Filipino disinformation. "
+                "You extract the single most verifiable factual claim from any text. "
+                "You always respond with valid JSON only — no markdown, no explanation."
+            ),
+            generation_config=types.GenerationConfig(
+                temperature=0.1,
+                max_output_tokens=512,
+                response_mime_type="application/json",
+            ),
+        )
+    return _model
 
 
 async def extract_claim(preprocessed: PreprocessedInput) -> ExtractedClaim:
     prompt = _build_extraction_prompt(preprocessed.text, preprocessed.language)
+    response = _gemini().generate_content(prompt)
+    raw = response.text.strip()
 
-    response = await _groq().chat.completions.create(
-        model=settings.GROQ_TEXT_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a fact-checking assistant specializing in Filipino disinformation. "
-                    "You extract the single most verifiable factual claim from any text. "
-                    "You always respond with valid JSON only — no markdown, no explanation."
-                )
-            },
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=512,
-        temperature=0.1,
-    )
-
-    raw = response.choices[0].message.content.strip()
-
-    # strip markdown fences if model adds them
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
 
-    # fallback if json parsing fails
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:

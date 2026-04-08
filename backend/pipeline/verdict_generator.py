@@ -5,7 +5,8 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from groq import AsyncGroq
+import google.generativeai as genai
+from google.generativeai import types
 from models import (
     ExtractedClaim, FactCheckResults, CoverageReport, Verdict,
     VerdictTrace, VerdictStep, SourceCredibility,
@@ -16,25 +17,38 @@ settings = get_settings()
 
 VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
 
-# load registry once at import
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
 with open(_REGISTRY_PATH) as f:
     _REGISTRY: dict = json.load(f)["outlets"]
 
-# lazy init
-_client: AsyncGroq | None = None
+_model = None
 
-def _groq() -> AsyncGroq:
-    global _client
-    if _client is None:
-        # to avoid hanging pag error
-        if not settings.GROQ_API_KEY or settings.GROQ_API_KEY == "":
+def _gemini():
+    global _model
+    if _model is None:
+        if not settings.GEMINI_API_KEY:
             raise ValueError(
-                "GROQ_API_KEY is not configured in .env file. "
-                "Get your key from: https://console.groq.com/keys"
+                "GEMINI_API_KEY is not configured in .env. "
+                "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-    return _client
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        _model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=(
+                "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
+                "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
+                "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON.\n\n"
+                "You are an expert fact-checker for Philippine news and information. "
+                "You analyze claims using evidence and give clear verdicts. "
+                "Always respond with valid JSON only."
+            ),
+            generation_config=types.GenerationConfig(
+                temperature=0.2,
+                max_output_tokens=1500,
+                response_mime_type="application/json",
+            ),
+        )
+    return _model
 
 
 async def generate_verdict(
@@ -46,29 +60,9 @@ async def generate_verdict(
 ) -> Verdict:
 
     prompt = _build_verdict_prompt(claim, fact_checks, coverage)
+    response = _gemini().generate_content(prompt)
 
-    response = await _groq().chat.completions.create(
-        model=settings.GROQ_TEXT_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
-                    "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
-                    "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON."
-                    "\n\n"
-                    "You are an expert fact-checker for Philippine news and information. "
-                    "You analyze claims using evidence and give clear verdicts. "
-                    "Always respond with valid JSON only."
-                )
-            },
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=1500,
-        temperature=0.2,
-    )
-
-    raw = response.choices[0].message.content.strip()
+    raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -103,63 +97,50 @@ async def generate_verdict(
     )
 
 
-def _build_trace(
-    parsed: dict,
-    fact_checks: FactCheckResults,
-    coverage: CoverageReport,
-) -> VerdictTrace:
+def _build_trace(parsed: dict, fact_checks: FactCheckResults, coverage: CoverageReport) -> VerdictTrace:
     steps = []
 
-    # step 1 — fact check lookup
     if fact_checks.found:
         fc_sources = list({m.source for m in fact_checks.matches[:3]})
         steps.append(VerdictStep(
             step="Fact Check Lookup",
             finding=f"Found {len(fact_checks.matches)} existing fact-check(s) from {', '.join(fc_sources)}",
-            weight="high",
-            icon="🔍",
+            weight="high", icon="🔍",
         ))
     else:
         steps.append(VerdictStep(
             step="Fact Check Lookup",
             finding="No existing fact-checks found in IFCN-certified sources",
-            weight="medium",
-            icon="🔍",
+            weight="medium", icon="🔍",
         ))
 
-    # step 2 — coverage analysis
     covering_count = len(coverage.covering)
     bias = coverage.bias_spread
     if covering_count > 0:
         spread = [f"{v} {k}" for k, v in bias.items() if v > 0]
         steps.append(VerdictStep(
             step="Coverage Analysis",
-            finding=f"{covering_count} outlet(s) found — bias spread: {', '.join(spread) or 'none detected'}",
-            weight="medium",
-            icon="📰",
+            finding=f"{covering_count} outlet(s) found - bias spread: {', '.join(spread) or 'none detected'}",
+            weight="medium", icon="📰",
         ))
     else:
         steps.append(VerdictStep(
             step="Coverage Analysis",
             finding="No Philippine news outlets found covering this story",
-            weight="low",
-            icon="📰",
+            weight="low", icon="📰",
         ))
 
-    # step 3 — AI reasoning
     ai_finding = parsed.get("reasoning_summary", "") or (parsed.get("explanation_en", "") or "")[:120]
     steps.append(VerdictStep(
         step="AI Reasoning",
         finding=ai_finding or "Verdict derived from available evidence",
-        weight="high",
-        icon="🤖",
+        weight="high", icon="🤖",
     ))
 
     summary = parsed.get(
         "trace_summary",
         f"Verdict reached based on {len(fact_checks.matches)} fact-check(s) and {covering_count} outlet(s)."
     )
-
     return VerdictTrace(steps=steps, summary=summary)
 
 
@@ -200,8 +181,7 @@ def _fallback_verdict(
             steps=[VerdictStep(
                 step="AI Reasoning",
                 finding="Verdict generation failed — model returned unexpected output",
-                weight="high",
-                icon="🤖",
+                weight="high", icon="🤖",
             )],
             summary="Analysis incomplete. Please try again.",
         ),
@@ -246,7 +226,7 @@ INSTRUCTIONS:
 1. Weigh the existing fact-checks heavily — they are from verified IFCN fact-checkers
 2. Consider the coverage spread — if only one political side covers a story, flag this
 3. Assign one rating: "true" | "false" | "misleading" | "unverified" | "needs_context"
-4. Assign a confidence score 0.0–1.0 (higher if backed by direct fact-checks)
+4. Assign a confidence score 0.0-1.0 (higher if backed by direct fact-checks)
 5. Write explanation_en in clear English (2-3 sentences)
 6. Write explanation_tl in natural Filipino/Tagalog (2-3 sentences), conversational tone
 7. Write reasoning_summary: one sentence — the KEY reason for your verdict
@@ -263,3 +243,5 @@ Respond ONLY with this JSON:
   "trace_summary": "One sentence: summary of the analysis process.",
   "sources": ["url1", "url2"]
 }}"""
+
+##kuya dwane/razo pa-update ng no. 4 after implementing credibility/confidence calculation, reference na lang here
