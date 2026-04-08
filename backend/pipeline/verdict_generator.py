@@ -44,7 +44,6 @@ def _gemini():
             ),
             generation_config=types.GenerationConfig(
                 temperature=0.2,
-                max_output_tokens=1500,
                 response_mime_type="application/json",
             ),
         )
