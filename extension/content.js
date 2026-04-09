@@ -2,16 +2,9 @@ let verifAI_panel = null
 let verifAI_popup = null
 let selectedClaim = ''
 let _lastVerdictData = null
+let _panelReady = false
 
 const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
-
-document.addEventListener('mouseup', () => {
-    const selected_text = window.getSelection().toString().trim()
-    if (selected_text.length > 100) {
-        selectedClaim = selected_text
-        show_popup()
-    }
-})
 
 function show_popup() {
     if (verifAI_popup) hide_popup()
@@ -122,7 +115,7 @@ function injectUnderlineStyles() {
             background: rgba(59,130,246,0.25) !important;
         }
     `
-        ; (document.head || document.documentElement).appendChild(style)
+    ; (document.head || document.documentElement).appendChild(style)
 }
 
 function removeUnderlineStyles() {
@@ -179,19 +172,45 @@ chrome.runtime.onMessage.addListener((message) => {
     }
     if (message.type === "SHOW_VERDICT") {
         _lastVerdictData = message.verdict
-        show_verdict_panel(message.verdict)
+        const existing = document.getElementById('verifai-root')
+        if (existing && _panelReady) {
+            update_panel_ui(existing.shadowRoot, message.verdict)
+        } else if (existing && !_panelReady) {
+            _pendingVerdict = { data: message.verdict, errorMsg: null }
+        } else {
+            show_verdict_panel(message.verdict)
+        }
     }
     if (message.type === "SHOW_ERROR") {
-        show_verdict_panel(null, message.message)
+        const existing = document.getElementById('verifai-root')
+        if (existing && _panelReady) {
+            update_panel_ui(existing.shadowRoot, null, message.message)
+        } else if (existing && !_panelReady) {
+            _pendingVerdict = { data: null, errorMsg: message.message }
+        } else {
+            show_verdict_panel(null, message.message)
+        }
     }
 })
 
+let _pendingVerdict = null 
+
 function show_verdict_panel(data, errorMsg) {
-    if (document.getElementById('verifai-root')) {
+    if (document.getElementById('verifai-root') && _panelReady) {
         const existing = document.getElementById('verifai-root')
         update_panel_ui(existing.shadowRoot, data, errorMsg)
         return
     }
+
+    if (document.getElementById('verifai-root') && !_panelReady) {
+        if (data !== null || errorMsg) {
+            _pendingVerdict = { data, errorMsg }
+        }
+        return
+    }
+
+    _panelReady = false
+    _pendingVerdict = data !== null ? { data, errorMsg } : null
 
     const host = document.createElement('div')
     host.id = 'verifai-root'
@@ -217,6 +236,7 @@ function show_verdict_panel(data, errorMsg) {
             closeBtn.onclick = () => {
                 const el = document.getElementById('verifai-root')
                 if (el) el.remove()
+                _panelReady = false
             }
         }
 
@@ -237,9 +257,16 @@ function show_verdict_panel(data, errorMsg) {
         window.addEventListener('verifai:closepanel', () => {
             const el = document.getElementById('verifai-root')
             if (el) el.remove()
+            _panelReady = false
         })
 
-        update_panel_ui(shadow, data, errorMsg)
+        _panelReady = true
+        if (_pendingVerdict) {
+            update_panel_ui(shadow, _pendingVerdict.data, _pendingVerdict.errorMsg)
+            _pendingVerdict = null
+        } else if (data !== null) {
+            update_panel_ui(shadow, data, errorMsg)
+        }
     })
 }
 
