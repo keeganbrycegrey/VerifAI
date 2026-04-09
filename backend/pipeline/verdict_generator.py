@@ -20,6 +20,7 @@ VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
 
 
 def _fuzzy_map(verdict_mean: float) -> tuple[str, float]:
+    \"\"\"Map weighted mean [0.0-1.0] to (rating, confidence)\"\"\"
     if verdict_mean >= 0.8:
         return "true", 0.9
     elif verdict_mean >= 0.6:
@@ -30,66 +31,8 @@ def _fuzzy_map(verdict_mean: float) -> tuple[str, float]:
         return "false", 0.9
 
 
-def _compute_verdict(
-    source_scores: dict[str, int],
-    all_sources: set[str],
-    registry: dict,
-    fact_check_sources: set[str],
-    model_confidence: float | None = None,
-) -> tuple[float, str, float]:
+# Fix for Pylance: use raw string or double backslashes if needed
 
-    weighted_values = []
-    weights = []
-    normalized_truths = []
-
-    for source in all_sources:
-        if source not in source_scores:
-            continue
-
-        truth_score = source_scores[source] / 100.0
-        cred_score = registry.get(source, {}).get("credibility_score", 0.5)
-
-        if source in fact_check_sources:
-            cred_score *= 1.25
-
-        weighted_values.append(truth_score * cred_score)
-        weights.append(cred_score)
-        normalized_truths.append(truth_score)
-
-    if not weighted_values or not weights:
-        return 0.5, "unverified", 0.2
-
-    verdict_mean = sum(weighted_values) / sum(weights)
-
-    if len(normalized_truths) > 1:
-        variance = statistics.pvariance(normalized_truths)
-    else:
-        variance = 0.0
-
-    agreement = max(0.0, 1 - variance)
-
-    if verdict_mean >= 0.8:
-        rating = "true"
-    elif verdict_mean >= 0.6:
-        rating = "needs_context"
-    elif verdict_mean >= 0.4:
-        rating = "misleading"
-    else:
-        rating = "false"
-
-    source_factor = min(1.0, len(weights) / 5)
-    extremity = abs(verdict_mean - 0.5) * 2
-
-    base_conf = (0.5 * agreement) + (0.3 * source_factor) + (0.2 * extremity)
-
-    if model_confidence is not None:
-        confidence = (0.6 * base_conf) + (0.4 * model_confidence)
-    else:
-        confidence = base_conf
-
-    confidence = max(0.1, min(0.95, confidence))
-
-    return verdict_mean, rating, confidence
 
 
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
@@ -98,7 +41,6 @@ with open(_REGISTRY_PATH) as f:
     _REGISTRY: dict = json.load(f)["outlets"]
 
 _model = None
-
 
 def _gemini():
     global _model
@@ -147,25 +89,26 @@ async def generate_verdict(
 
     try:
         parsed = json.loads(raw)
-        source_scores = parsed.get("source_scores", {})
+        source_scores = parsed.get("source_scores", {})  # {source: truth_score_1_100}
     except json.JSONDecodeError:
         return _fallback_verdict(claim, fact_checks, coverage, input_type, source_surface)
 
-    all_sources = (
-        {m.source for m in fact_checks.matches if m.claim_reviewed}
-        |
-        {o.outlet for o in coverage.covering if o.outlet_has_claim}
-    )
+    # Compute weighted mean
+    all_sources = {m.source for m in fact_checks.matches if m.claim_reviewed} | {o.outlet for o in coverage.covering if o.outlet_has_claim}  # only outlets with feasible claims
+    weighted_scores = []
+    for source in all_sources:
+        truth_score = source_scores.get(source, 50)  # default neutral
+        cred_score = _REGISTRY.get(source, {}).get("credibility_score", 0.5)
+        weighted = (truth_score / 100.0) * cred_score
+        weighted_scores.append(weighted)
 
-    fact_check_sources = {m.source for m in fact_checks.matches}
-
-    verdict_mean, rating, confidence = _compute_verdict(
-        source_scores=source_scores,
-        all_sources=all_sources,
-        registry=_REGISTRY,
-        fact_check_sources=fact_check_sources,
-        model_confidence=parsed.get("confidence"),
-    )
+    if not weighted_scores:
+        verdict_mean = 0.5
+        rating = "unverified"
+        confidence = 0.0
+    else:
+        verdict_mean = statistics.mean(weighted_scores)
+        rating, confidence = _fuzzy_map(verdict_mean)
 
     return Verdict(
         claim=claim.core_claim,
