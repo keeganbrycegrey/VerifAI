@@ -8,11 +8,14 @@ const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
 const MIN_CHAR_COUNT = 20
 
 document.addEventListener('mouseup', () => {
+    console.log('[VerifAI DEBUG] Mouseup detected');
     const selection = window.getSelection()
     const text = selection ? selection.toString().trim() : ''
+    console.log('[VerifAI DEBUG] Selected text length:', text.length);
 
     if (text.length >= MIN_CHAR_COUNT) {
         selectedClaim = text
+        console.log('[VerifAI DEBUG] Text qualifies, calling show_popup()');
         show_popup()
     } else {
         if (verifAI_popup) hide_popup()
@@ -20,6 +23,7 @@ document.addEventListener('mouseup', () => {
 })
 
 function show_popup() {
+    console.log('[VerifAI DEBUG] show_popup() called');
     if (verifAI_popup) hide_popup()
 
     const selection = window.getSelection()
@@ -34,13 +38,15 @@ function show_popup() {
     host.id = 'verifai-popup-root'
     host.style.cssText = `position:fixed;top:${popupTop}px;left:${Math.max(10, popupLeft)}px;z-index:2147483647;pointer-events:none`
     document.body.appendChild(host)
+    console.log('[VerifAI DEBUG] Popup host created and appended to body');
 
     const shadow = host.attachShadow({ mode: 'open' })
 
-    Promise.all([
+        Promise.all([
         fetch(chrome.runtime.getURL('popup.html')).then(r => r.text()),
         fetch(chrome.runtime.getURL('popup.css')).then(r => r.text()),
     ]).then(([html, css]) => {
+        console.log('[VerifAI DEBUG] Popup HTML/CSS loaded successfully');
         const style = document.createElement('style')
         style.textContent = css
         const container = document.createElement('div')
@@ -51,6 +57,7 @@ function show_popup() {
 
         verifAI_popup = shadow
         host.style.pointerEvents = 'auto'
+        console.log('[VerifAI DEBUG] Popup shadow DOM ready, pointer-events enabled');
 
         underlineClaim(range)
 
@@ -64,13 +71,19 @@ function show_popup() {
         const closeBtn = shadow.getElementById('verif-close')
         if (closeBtn) closeBtn.onclick = () => hide_popup()
 
-        window.addEventListener('verifai:factcheck', () => request_verification(selectedClaim), { once: true })
+        window.addEventListener('verifai:factcheck', () => {
+            console.log('[VerifAI DEBUG] verifai:factcheck event received');
+            request_verification(selectedClaim)
+        }, { once: true })
         window.addEventListener('verifai:closepopup', () => hide_popup(), { once: true })
         window.addEventListener('verifai:trashunderline', () => { removeUnderline(); hide_popup() }, { once: true })
         window.addEventListener('verifai:viewpanel', () => {
             show_verdict_panel(_lastVerdictData)
             hide_popup()
         }, { once: true })
+        console.log('[VerifAI DEBUG] All popup event listeners attached');
+    }).catch(err => {
+        console.error('[VerifAI DEBUG] Failed to load popup resources:', err);
     })
 }
 
@@ -137,6 +150,7 @@ function removeUnderlineStyles() {
 }
 
 async function request_verification(text) {
+    console.log('[VerifAI DEBUG] request_verification called with text:', text.substring(0, 50) + '...');
     const host = document.getElementById('verifai-popup-root')
     if (host) {
         const shadow = host.shadowRoot
@@ -145,8 +159,10 @@ async function request_verification(text) {
     }
 
     chrome.runtime.sendMessage({ action: "check_claim", content: text, type: "text" }, (response) => {
+        console.log('[VerifAI DEBUG] Background response received:', response ? response.status : 'NO RESPONSE');
         if (response && response.status === "success") {
             _lastVerdictData = response.data
+            console.log('[VerifAI DEBUG] Verdict received, calling show_verdict_panel');
 
             const host = document.getElementById('verifai-popup-root')
             if (host) {
@@ -210,6 +226,7 @@ let _pendingVerdict = null
 
 // isLoading=true: panel opens immediately and waits for SHOW_VERDICT; does NOT overwrite pending slot
 function show_verdict_panel(data, errorMsg, isLoading = false) {
+    console.log('[VerifAI DEBUG] show_verdict_panel called with:', {data: !!data, errorMsg: !!errorMsg, isLoading});
     if (document.getElementById('verifai-root') && _panelReady) {
         const existing = document.getElementById('verifai-root')
         if (isLoading) {
@@ -217,6 +234,7 @@ function show_verdict_panel(data, errorMsg, isLoading = false) {
         } else {
             update_panel_ui(existing.shadowRoot, data, errorMsg)
         }
+        console.log('[VerifAI DEBUG] Updated existing panel');
         return
     }
 
@@ -236,11 +254,13 @@ function show_verdict_panel(data, errorMsg, isLoading = false) {
     document.body.appendChild(host)
 
     const shadow = host.attachShadow({ mode: 'open' })
+    console.log('[VerifAI DEBUG] Panel shadow DOM created');
 
     Promise.all([
         fetch(chrome.runtime.getURL('panel.html')).then(r => r.text()),
         fetch(chrome.runtime.getURL('panel.css')).then(r => r.text()),
     ]).then(([html, css]) => {
+        console.log('[VerifAI DEBUG] Panel HTML/CSS loaded');
         const style = document.createElement('style')
         style.textContent = css
         const container = document.createElement('div')
