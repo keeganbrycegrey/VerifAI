@@ -1,0 +1,59 @@
+{
+    "manifest_version": 3,
+    "name": "VerifAI Fact Checker",
+    "version": "0.1.0",
+    "description": "Philippine Multimodal AI-powered fact checker. Highlight text or right-click images to fact-check instantly.",
+    "icons": {
+        "16":  "icons/icon16.png",
+        "32":  "icons/icon32.png",
+        "48":  "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "permissions": [
+        "activeTab",
+        "storage",
+        "scripting",
+        "contextMenus"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"],
+            "css": ["panel.css"]
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "VerifAI",
+        "default_icon": {
+            "16":  "icons/icon16.png",
+            "32":  "icons/icon32.png",
+            "48":  "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "icons/icon16.png",
+                "icons/icon32.png",
+                "icons/icon48.png",
+                "icons/icon128.png",
+                "panel.html",
+                "panel.js",
+                "panel.css",
+                "popup.html",
+                "popup.css",
+                "popup.js",
+                "panel.js"
+            ],
+            "matches": ["<all_urls>"]
+        }
+    ]
+}

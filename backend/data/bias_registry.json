@@ -1,0 +1,125 @@
+{
+  "_note": "hand-curated bias and credibility ratings for philippine news outlets. based on cmfr assessments and documented editorial patterns.",
+  "_last_updated": "2026-03",
+  "_credibility_scale": {
+    "highly_reliable":    "0.80–1.0 — strong editorial standards, IFCN-certified or equivalent",
+    "generally_reliable": "0.60–0.79 — mostly accurate, minor editorial issues",
+    "needs_context":      "0.40–0.59 — accurate but strong slant or incomplete coverage",
+    "state_media":        "0.30–0.49 — government-controlled, inherent conflict of interest",
+    "unreliable":         "0.0–0.29 — documented history of false or misleading content"
+  },
+  "outlets": {
+    "Rappler": {
+      "bias": "left",
+      "domain": "rappler.com",
+      "rss": "https://www.rappler.com/feed",
+      "credibility_score": 0.85,
+      "credibility_class": "highly_reliable",
+      "credibility_explanation": "IFCN-certified fact-checker with international press freedom awards. Strong editorial standards. Known left-leaning editorial stance."
+    },
+    "GMA News": {
+      "bias": "center",
+      "domain": "gmanetwork.com",
+      "rss": "https://data.gmanews.tv/gno/rss/news/feed.xml",
+      "credibility_score": 0.78,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "Major broadcast network with established editorial standards. Generally centrist but commercial pressures occasionally affect coverage depth."
+    },
+    "Inquirer": {
+      "bias": "center",
+      "domain": "inquirer.net",
+      "rss": "https://newsinfo.inquirer.net/feed",
+      "credibility_score": 0.76,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "One of the largest Philippine broadsheets. Strong investigative tradition but occasionally criticized for sensationalist headlines."
+    },
+    "Philippine News Agency": {
+      "bias": "state",
+      "domain": "pna.gov.ph",
+      "rss": "https://www.pna.gov.ph/latest.rss",
+      "credibility_score": 0.40,
+      "credibility_class": "state_media",
+      "credibility_explanation": "Official government news agency. Factually accurate on public announcements but lacks editorial independence — coverage favors government narrative."
+    },
+    "Business Mirror": {
+      "bias": "center",
+      "domain": "businessmirror.com.ph",
+      "rss": "https://businessmirror.com.ph/feed",
+      "credibility_score": 0.70,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "Business and economic focus with generally solid reporting. Limited coverage of political and social issues."
+    },
+    "Eagle News": {
+      "bias": "right",
+      "domain": "eaglenews.ph",
+      "rss": "https://www.eaglenews.ph/feed",
+      "credibility_score": 0.45,
+      "credibility_class": "needs_context",
+      "credibility_explanation": "Affiliated with Iglesia ni Cristo. Factually accurate on reported events but strong institutional bias affects story selection and framing."
+    },
+    "Google News PH": {
+      "bias": "aggregator",
+      "domain": "news.google.com",
+      "rss": "https://news.google.com/rss?hl=en-PH&gl=PH&ceid=PH:en",
+      "credibility_score": 0.72,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "Aggregator — credibility depends on sourced outlets. Useful for coverage breadth but not a primary source."
+    },
+    "ABS-CBN News": {
+      "bias": "center",
+      "domain": "abs-cbn.com",
+      "rss": null,
+      "credibility_score": 0.80,
+      "credibility_class": "highly_reliable",
+      "credibility_explanation": "Major broadcast network with strong investigative reporting history. 2020 broadcast shutdown has not significantly affected digital credibility."
+    },
+    "PhilStar": {
+      "bias": "center",
+      "domain": "philstar.com",
+      "rss": null,
+      "credibility_score": 0.74,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "Established broadsheet with solid news standards. Occasionally criticized for proximity to business interests."
+    },
+    "Manila Bulletin": {
+      "bias": "right",
+      "domain": "mb.com.ph",
+      "rss": null,
+      "credibility_score": 0.55,
+      "credibility_class": "needs_context",
+      "credibility_explanation": "Long-established conservative outlet. Generally factual but editorial stance strongly favors establishment and business interests."
+    },
+    "Manila Standard": {
+      "bias": "right",
+      "domain": "manilastandard.net",
+      "rss": null,
+      "credibility_score": 0.48,
+      "credibility_class": "needs_context",
+      "credibility_explanation": "Conservative editorial line with documented pro-establishment bias. Factual accuracy varies — verify claims independently."
+    },
+    "One News PH": {
+      "bias": "center",
+      "domain": "onenews.ph",
+      "rss": null,
+      "credibility_score": 0.68,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "BeMediaGroup outlet with generally solid reporting standards. Relatively newer with less extensive editorial track record than legacy outlets."
+    },
+    "CNN Philippines": {
+      "bias": "center",
+      "domain": "cnnphilippines.com",
+      "rss": null,
+      "credibility_score": 0.75,
+      "credibility_class": "generally_reliable",
+      "credibility_explanation": "International brand standards applied to local coverage. Strong on breaking news, occasional depth issues on complex local stories."
+    },
+    "VERA Files": {
+      "bias": "left",
+      "domain": "verafiles.org",
+      "rss": null,
+      "credibility_score": 0.90,
+      "credibility_class": "highly_reliable",
+      "credibility_explanation": "IFCN-certified Philippine fact-checker with rigorous methodology. One of the most credible sources in the registry."
+    }
+  }
+}

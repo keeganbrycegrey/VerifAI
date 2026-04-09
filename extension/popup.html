@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerifAI Popup</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="verifai-panel">
+    <div class="verifai-header">
+      <div class="header-side">
+        <button id="btn-dashboard" class="header-icon-btn" title="Open Dashboard">⊞</button>
+      </div>
+      
+      <div class="header-center">
+        <img class="verifai-icon" src="icons/icon48.png" alt="VerifAI">
+        <div class="header-text">
+          <div class="verifai-title">VERIFAI</div>
+          <div class="verifai-subtitle">Fact Checker PH</div>
+        </div>
+      </div>
+
+      <div class="header-side">
+        <button id="verif-close" class="verifai-close">×</button>
+      </div>
+    </div>
+
+    <div class="verifai-body">
+      <div class="verdict-card">
+        <div class="verdict-row">
+          <span class="verifai-label">Verdict</span>
+          <span id="verif-verdict" class="verifai-value">—</span>
+        </div>
+        <div class="verdict-row">
+          <span class="verifai-label">Confidence</span>
+          <span id="verif-confidence" class="verifai-value">—</span>
+        </div>
+        <div class="verdict-row">
+          <span class="verifai-label">Source</span>
+          <span id="verif-source" class="verifai-value">—</span>
+        </div>
+      </div>
+
+      <div class="confidence-section">
+        <label class="confidence-label">Confidence Level</label>
+        <div class="confidence-bar-container">
+          <div id="confidence-bar" class="confidence-bar" style="width: 0%"></div>
+        </div>
+        <div id="confidence-percent" class="confidence-percentage">0%</div>
+      </div>
+
+      <div class="explanation-section">
+        <label class="verifai-explanation-label">Explanation</label>
+        <div id="verif-explanation-en" class="verifai-explanation-value">—</div>
+      </div>
+
+      <div class="explanation-section">
+        <label class="verifai-explanation-label">Paliwanag</label>
+        <div id="verif-explanation-tl" class="verifai-explanation-value">—</div>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

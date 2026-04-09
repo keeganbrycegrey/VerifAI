@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <div class="verifai-panel">
+    <div class="verifai-header">
+      <div class="header-content">
+        <div class="verifai-title">VERIFAI</div>
+        <div class="verifai-subtitle">Fact Checker PH</div>
+      </div>
+      <div class="header-actions">
+        <span class="nav-dash" id="btn-dashboard" title="Open Dashboard">⊞</span>
+        <button class="verif-close" id="verif-close">×</button>
+      </div>
+    </div>
+
+    <nav class="verifai-nav">
+      <button id="btn-checker" class="nav-btn active">Checker</button>
+      <button id="btn-history" class="nav-btn">History</button>
+    </nav>
+
+    <div id="loading-state" class="loading-container">
+      <div class="loading-wrapper">
+        <div class="loading-spinner"></div>
+        <div class="loading-glow"></div>
+      </div>
+      <div class="loading-text">
+        Verifying claim
+        <div class="loading-dots">
+          <span>.</span><span>.</span><span>.</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="content-state" class="content-container hidden">
+      <div id="tab-checker" class="tab-content">
+        <div class="content-scroll">
+          <div class="verdict-card">
+            <div class="verdict-row">
+              <span class="verdict-label">Verdict</span>
+              <span id="verif-verdict" class="verdict-value">—</span>
+            </div>
+            <div class="verdict-row">
+              <span class="verdict-label">Confidence</span>
+              <span id="verif-confidence" class="verdict-value">—</span>
+            </div>
+            <div class="verdict-row">
+              <span class="verdict-label">Source</span>
+              <span id="verif-source" class="verdict-value">—</span>
+            </div>
+          </div>
+
+          <div class="explanation-section">
+            <label class="section-label">Explanation</label>
+            <div id="verif-explanation-en" class="explanation-value">—</div>
+          </div>
+
+          <div class="explanation-section">
+            <label class="section-label">Paliwanag</label>
+            <div id="verif-explanation-tl" class="explanation-value">—</div>
+          </div>
+
+          <div class="trace-section hidden" id="verif-trace-section">
+            <label class="section-label">How we got here</label>
+            <div id="verif-trace-steps"></div>
+            <div class="trace-summary" id="verif-trace-summary"></div>
+          </div>
+
+          <div class="cred-section hidden" id="verif-cred-section">
+            <label class="section-label">Source credibility</label>
+            <div id="verif-cred-list"></div>
+          </div>
+
+          <div class="transparency-section hidden" id="verif-transparency-section">
+            <label class="section-label">How This Verdict Was Calculated</label>
+            <div id="transparency-content"></div>
+          </div>
+        </div>
+
+        <div class="action-group">
+          <button class="action-btn" id="btn-copy">Copy</button>
+          <button class="action-btn" id="btn-report">Report</button>
+        </div>
+      </div>
+
+      <div id="tab-history" class="tab-content hidden">
+        <div id="history-list" class="history-list"></div>
+      </div>
+
+      <div id="detail-view" class="detail-view hidden">
+        <div class="detail-header">
+          <button class="detail-back" id="detail-back">← Back</button>
+          <span class="detail-title">Details</span>
+        </div>
+        <div class="detail-content-scroll">
+          <div id="detail-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
