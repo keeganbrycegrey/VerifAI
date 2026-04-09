@@ -5,26 +5,24 @@ import base64
 import io
 import httpx
 from bs4 import BeautifulSoup
-import google.generativeai as genai
-from PIL import Image
+from groq import Groq
 from models import PreprocessedInput
 from config import get_settings
 
 settings = get_settings()
 
-_model = None
+_client = None
 
-def _gemini():
-    global _model
-    if _model is None:
-        if not settings.GEMINI_API_KEY:
+def _groq():
+    global _client
+    if _client is None:
+        if not settings.GROQ_API_KEY:
             raise ValueError(
-                "GEMINI_API_KEY is not configured in .env. "
-                "Get your key from: https://aistudio.google.com/app/apikey"
+                "GROQ_API_KEY is not configured in .env. "
+                "Get your key from: https://console.groq.com/keys"
             )
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        _model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    return _model
+        _client = Groq(api_key=settings.GROQ_API_KEY)
+    return _client
 
 
 async def preprocess(input_type: str, content: str) -> PreprocessedInput:
@@ -47,19 +45,39 @@ async def preprocess(input_type: str, content: str) -> PreprocessedInput:
 async def _ocr_image(base64_image: str) -> str:
     # strip data URI prefix if present
     if "," in base64_image:
-        base64_image = base64_image.split(",", 1)[1]
+        media_type, base64_image = base64_image.split(",", 1)
+        # extract mime type e.g. "data:image/jpeg;base64" -> "image/jpeg"
+        media_type = media_type.replace("data:", "").replace(";base64", "")
+    else:
+        media_type = "image/jpeg"
 
-    image_bytes = base64.b64decode(base64_image)
-    image = Image.open(io.BytesIO(image_bytes))
-
-    prompt = (
-        "Extract ALL visible text from this image exactly as it appears. "
-        "Include text from memes, screenshots, captions, watermarks — everything. "
-        "Do not summarize, comment, or add anything. Return only the raw extracted text."
+    response = _groq().chat.completions.create(
+        model=settings.GROQ_VISION_MODEL,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{media_type};base64,{base64_image}",
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Extract ALL visible text from this image exactly as it appears. "
+                            "Include text from memes, screenshots, captions, watermarks — everything. "
+                            "Do not summarize, comment, or add anything. Return only the raw extracted text."
+                        ),
+                    },
+                ],
+            }
+        ],
+        max_tokens=1024,
     )
 
-    response = _gemini().generate_content([prompt, image])
-    return response.text.strip()
+    return response.choices[0].message.content.strip()
 
 
 async def _fetch_url_text(url: str) -> str:

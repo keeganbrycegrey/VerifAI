@@ -5,6 +5,8 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from collections import defaultdict
+from typing import List, Tuple
 from groq import Groq
 from models import (
     ExtractedClaim, FactCheckResults, CoverageReport, Verdict,
@@ -16,85 +18,11 @@ settings = get_settings()
 
 VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
 
-
-def _fuzzy_map(verdict_mean: float) -> tuple[str, float]:
-    if verdict_mean >= 0.8:
-        return "true", 0.9
-    elif verdict_mean >= 0.6:
-        return "needs_context", 0.7
-    elif verdict_mean >= 0.4:
-        return "misleading", 0.6
-    else:
-        return "false", 0.9
-
-
-def _compute_verdict(
-    source_scores: dict[str, int],
-    all_sources: set[str],
-    registry: dict,
-    fact_check_sources: set[str],
-    model_confidence: float | None = None,
-) -> tuple[float, str, float]:
-
-    weighted_values = []
-    weights = []
-    normalized_truths = []
-
-    for source in all_sources:
-        if source not in source_scores:
-            continue
-
-        truth_score = source_scores[source] / 100.0
-        cred_score = registry.get(source, {}).get("credibility_score", 0.5)
-
-        if source in fact_check_sources:
-            cred_score *= 1.25
-
-        weighted_values.append(truth_score * cred_score)
-        weights.append(cred_score)
-        normalized_truths.append(truth_score)
-
-    if not weighted_values or not weights:
-        return 0.5, "unverified", 0.2
-
-    verdict_mean = sum(weighted_values) / sum(weights)
-
-    if len(normalized_truths) > 1:
-        variance = statistics.pvariance(normalized_truths)
-    else:
-        variance = 0.0
-
-    agreement = max(0.0, 1 - variance)
-
-    if verdict_mean >= 0.8:
-        rating = "true"
-    elif verdict_mean >= 0.6:
-        rating = "needs_context"
-    elif verdict_mean >= 0.4:
-        rating = "misleading"
-    else:
-        rating = "false"
-
-    source_factor = min(1.0, len(weights) / 5)
-    extremity = abs(verdict_mean - 0.5) * 2
-
-    base_conf = (0.5 * agreement) + (0.3 * source_factor) + (0.2 * extremity)
-
-    if model_confidence is not None:
-        confidence = (0.6 * base_conf) + (0.4 * model_confidence)
-    else:
-        confidence = base_conf
-
-    confidence = max(0.1, min(0.95, confidence))
-
-    return verdict_mean, rating, confidence
-
-
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
 with open(_REGISTRY_PATH) as f:
     _REGISTRY: dict = json.load(f)["outlets"]
 
-_client = None
+_groq_client = None
 
 def _groq():
     global _groq_client
@@ -104,8 +32,8 @@ def _groq():
                 "GEMINI_API_KEY is not configured in .env. "
                 "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        _client = Groq(api_key=settings.GROQ_API_KEY)
-    return _client
+        _groq_client = Groq(api_key=settings.GROQ_API_KEY)
+    return _groq_client
 
 _TRUTH_VALUE = {
     "true": 1.0,
@@ -215,7 +143,11 @@ async def generate_verdict(
         confidence = min(0.85, max(0.1, adjusted_score))
 
     prompt = _build_verdict_prompt(claim, fact_checks, coverage)
-    response = _gemini().generate_content(prompt)
+    response = _groq().messages.create(
+        model="mixtral-8x7b-32768",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    response.text = response.choices[0].message.content
 
     raw = response.text.strip()
     if raw.startswith("```"):
@@ -226,25 +158,14 @@ async def generate_verdict(
 
     try:
         parsed = json.loads(raw)
-        source_scores = parsed.get("source_scores", {})
     except json.JSONDecodeError:
-        return _fallback_verdict(claim, fact_checks, coverage, input_type, source_surface)
+        parsed = {}
 
-    all_sources = (
-        {m.source for m in fact_checks.matches if m.claim_reviewed}
-        |
-        {o.outlet for o in coverage.covering if o.outlet_has_claim}
-    )
-
-    fact_check_sources = {m.source for m in fact_checks.matches}
-
-    verdict_mean, rating, confidence = _compute_verdict(
-        source_scores=source_scores,
-        all_sources=all_sources,
-        registry=_REGISTRY,
-        fact_check_sources=fact_check_sources,
-        model_confidence=parsed.get("confidence"),
-    )
+    explanation_en = parsed.get("explanation_en", "placeholder: bading si dion")
+    explanation_tl = parsed.get("explanation_tl", "placeholder: bading si dion")
+    reasoning_summary = parsed.get("reasoning_summary", "placeholder: bading si dion")
+    trace_summary = parsed.get("trace_summary", "placeholder: bading si dion")
+    sources = parsed.get("sources", ["placeholder: bading si dion"])
 
     return Verdict(
         claim=claim.core_claim,
