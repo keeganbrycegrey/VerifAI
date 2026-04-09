@@ -1,5 +1,5 @@
 # all api keys and env vars live here
-# wag ilalagay ang keys KAHIT SAAN, .env lang dapat, at dapat naka .gitignore
+# wag ilalagay ang keys KAHIT SAAN, railway lang
 # copy .env.example to .env
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,9 +25,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
-    # gemini
-    GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
+    # groq
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # google fact check
     GOOGLE_FACTCHECK_API_KEY: str = ""
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     MESSENGER_PAGE_ACCESS_TOKEN: str = ""
     MESSENGER_VERIFY_TOKEN: str = "VerifAI"
 
-    # gdelt 
+    # gdelt
     GDELT_BASE_URL: str = "https://api.gdeltproject.org/api/v2/doc/doc"
 
 
