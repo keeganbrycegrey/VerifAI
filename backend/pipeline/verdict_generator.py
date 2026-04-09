@@ -1,13 +1,11 @@
-# generates bilingual verdict from all evidence using hybrid AI + weighted credibility
-# AI assigns truth_score 1-100 per source, weighted by bias_registry credibility_score, mean → fuzzy rating/conf
 # separate file for complex logic
+# reasons over fact-checks + coverage data,
+# wag ito i-ooverwrite sa pipeline.py, dapat separate file siya since medyo complex na logic niya
 
 import json
-import statistics
 from datetime import datetime, timezone
 from pathlib import Path
-import google.generativeai as genai
-from google.generativeai import types
+from groq import Groq
 from models import (
     ExtractedClaim, FactCheckResults, CoverageReport, Verdict,
     VerdictTrace, VerdictStep, SourceCredibility,
@@ -20,7 +18,6 @@ VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
 
 
 def _fuzzy_map(verdict_mean: float) -> tuple[str, float]:
-    \"\"\"Map weighted mean [0.0-1.0] to (rating, confidence)\"\"\"
     if verdict_mean >= 0.8:
         return "true", 0.9
     elif verdict_mean >= 0.6:
@@ -31,43 +28,172 @@ def _fuzzy_map(verdict_mean: float) -> tuple[str, float]:
         return "false", 0.9
 
 
-# Fix for Pylance: use raw string or double backslashes if needed
+def _compute_verdict(
+    source_scores: dict[str, int],
+    all_sources: set[str],
+    registry: dict,
+    fact_check_sources: set[str],
+    model_confidence: float | None = None,
+) -> tuple[float, str, float]:
 
+    weighted_values = []
+    weights = []
+    normalized_truths = []
+
+    for source in all_sources:
+        if source not in source_scores:
+            continue
+
+        truth_score = source_scores[source] / 100.0
+        cred_score = registry.get(source, {}).get("credibility_score", 0.5)
+
+        if source in fact_check_sources:
+            cred_score *= 1.25
+
+        weighted_values.append(truth_score * cred_score)
+        weights.append(cred_score)
+        normalized_truths.append(truth_score)
+
+    if not weighted_values or not weights:
+        return 0.5, "unverified", 0.2
+
+    verdict_mean = sum(weighted_values) / sum(weights)
+
+    if len(normalized_truths) > 1:
+        variance = statistics.pvariance(normalized_truths)
+    else:
+        variance = 0.0
+
+    agreement = max(0.0, 1 - variance)
+
+    if verdict_mean >= 0.8:
+        rating = "true"
+    elif verdict_mean >= 0.6:
+        rating = "needs_context"
+    elif verdict_mean >= 0.4:
+        rating = "misleading"
+    else:
+        rating = "false"
+
+    source_factor = min(1.0, len(weights) / 5)
+    extremity = abs(verdict_mean - 0.5) * 2
+
+    base_conf = (0.5 * agreement) + (0.3 * source_factor) + (0.2 * extremity)
+
+    if model_confidence is not None:
+        confidence = (0.6 * base_conf) + (0.4 * model_confidence)
+    else:
+        confidence = base_conf
+
+    confidence = max(0.1, min(0.95, confidence))
+
+    return verdict_mean, rating, confidence
 
 
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
-
 with open(_REGISTRY_PATH) as f:
     _REGISTRY: dict = json.load(f)["outlets"]
 
-_model = None
+_client = None
 
-def _gemini():
-    global _model
-    if _model is None:
-        if not settings.GEMINI_API_KEY:
+def _groq():
+    global _groq_client
+    if _groq_client is None:
+        if not settings.GROQ_API_KEY:
             raise ValueError(
                 "GEMINI_API_KEY is not configured in .env. "
                 "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        _model = genai.GenerativeModel(
-            model_name=settings.GEMINI_MODEL,
-            system_instruction=(
-                "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
-                "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
-                "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON.\n\n"
-                "You are an expert fact-checker for Philippine news and information. "
-                "You analyze claims using evidence and give clear verdicts. "
-                "Always respond with valid JSON only."
-            ),
-            generation_config=types.GenerationConfig(
-                temperature=0.2,
-                response_mime_type="application/json",
-            ),
-        )
-    return _model
+        _client = Groq(api_key=settings.GROQ_API_KEY)
+    return _client
 
+_TRUTH_VALUE = {
+    "true": 1.0,
+    "false": 0.0,
+    "misleading": 0.6,
+    "needs_context": 0.5,
+    "unverified": 0.5,
+}
+
+def _aggregate_fact_check_verdicts(fact_checks: FactCheckResults) -> Tuple[float, str]:
+    if not fact_checks.found or not fact_checks.matches:
+        return None
+    scores = []
+    rating_counts = defaultdict(int)
+    for fc in fact_checks.matches:
+        score = _TRUTH_VALUE.get(fc.verdict.lower(), 0.5)
+        scores.append(score)
+        rating_counts[fc.verdict.lower()] += 1
+
+    avg_score = sum(scores) / len(scores)
+    rating = max(rating_counts.items(), key=lambda x: x[1])[0] if rating_counts else "unverified"
+    return avg_score, rating
+
+def _cluster_sources_by_content(sources: List[str]) -> List[List[str]]:
+    clusters = defaultdict(list)
+    for s in sources:
+        clusters[s].append(s)
+    return list(clusters.values())
+
+def _compute_cross_reference_score(
+    coverage: CoverageReport,
+) -> float:
+    outlet_info = {
+        o.outlet: _REGISTRY.get(o.outlet, {
+            "credibility_score": 0.5,
+            "bias": "center",
+        })
+        for o in coverage.covering
+    }
+
+    outlets = [o.outlet for o in coverage.covering]
+    clusters = _cluster_sources_by_content(outlets)
+
+    weighted_scores = []
+    weights = []
+
+    for cluster in clusters:
+        cred_scores = [outlet_info.get(outlet, {}).get("credibility_score", 0.5) for outlet in cluster]
+        avg_cred = sum(cred_scores) / max(len(cred_scores), 1)
+        truth_score = 0.5
+        echo_weight = 1 / len(cluster)
+
+        weighted_scores.append(truth_score * avg_cred * echo_weight)
+        weights.append(avg_cred * echo_weight)
+
+    if not weights:
+        return 0.5
+
+    cross_ref_score = sum(weighted_scores) / sum(weights)
+    return cross_ref_score
+
+def _calculate_polarization_penalty(bias_spread: dict) -> float:
+    left = bias_spread.get("left", 0)
+    center = bias_spread.get("center", 0)
+    right = bias_spread.get("right", 0)
+    total = left + center + right
+    if total == 0:
+        return 0.0
+
+    left_norm = left / total
+    center_norm = center / total
+    right_norm = right / total
+
+    polarization = max(left_norm, right_norm)
+    penalty = polarization * 0.3
+    return penalty
+
+def _map_score_to_rating(score: float) -> str:
+    if score >= 0.85:
+        return "true"
+    elif score >= 0.6:
+        return "misleading"
+    elif score >= 0.4:
+        return "needs_context"
+    elif score >= 0.2:
+        return "unverified"
+    else:
+        return "false"
 
 async def generate_verdict(
     claim: ExtractedClaim,
@@ -76,6 +202,17 @@ async def generate_verdict(
     input_type: str,
     source_surface: str,
 ) -> Verdict:
+
+    fc_agg = _aggregate_fact_check_verdicts(fact_checks)
+    if fc_agg is not None:
+        verdict_score, rating = fc_agg
+        confidence = 0.95
+    else:
+        cross_ref_score = _compute_cross_reference_score(coverage)
+        polarization_penalty = _calculate_polarization_penalty(coverage.bias_spread)
+        adjusted_score = max(0.0, cross_ref_score - polarization_penalty)
+        rating = _map_score_to_rating(adjusted_score)
+        confidence = min(0.85, max(0.1, adjusted_score))
 
     prompt = _build_verdict_prompt(claim, fact_checks, coverage)
     response = _gemini().generate_content(prompt)
@@ -89,88 +226,89 @@ async def generate_verdict(
 
     try:
         parsed = json.loads(raw)
-        source_scores = parsed.get("source_scores", {})  # {source: truth_score_1_100}
+        source_scores = parsed.get("source_scores", {})
     except json.JSONDecodeError:
         return _fallback_verdict(claim, fact_checks, coverage, input_type, source_surface)
 
-    # Compute weighted mean
-    all_sources = {m.source for m in fact_checks.matches if m.claim_reviewed} | {o.outlet for o in coverage.covering if o.outlet_has_claim}  # only outlets with feasible claims
-    weighted_scores = []
-    for source in all_sources:
-        truth_score = source_scores.get(source, 50)  # default neutral
-        cred_score = _REGISTRY.get(source, {}).get("credibility_score", 0.5)
-        weighted = (truth_score / 100.0) * cred_score
-        weighted_scores.append(weighted)
+    all_sources = (
+        {m.source for m in fact_checks.matches if m.claim_reviewed}
+        |
+        {o.outlet for o in coverage.covering if o.outlet_has_claim}
+    )
 
-    if not weighted_scores:
-        verdict_mean = 0.5
-        rating = "unverified"
-        confidence = 0.0
-    else:
-        verdict_mean = statistics.mean(weighted_scores)
-        rating, confidence = _fuzzy_map(verdict_mean)
+    fact_check_sources = {m.source for m in fact_checks.matches}
+
+    verdict_mean, rating, confidence = _compute_verdict(
+        source_scores=source_scores,
+        all_sources=all_sources,
+        registry=_REGISTRY,
+        fact_check_sources=fact_check_sources,
+        model_confidence=parsed.get("confidence"),
+    )
 
     return Verdict(
         claim=claim.core_claim,
         rating=rating,
         confidence=confidence,
-        explanation_en=parsed.get("explanation_en", f"Weighted mean truthfulness: {verdict_mean:.1%}"),
-        explanation_tl=parsed.get("explanation_tl", f"Weighted mean truthfulness: {verdict_mean:.1%}"),
-        sources=list(all_sources),
+        explanation_en=explanation_en,
+        explanation_tl=explanation_tl,
+        sources=sources,
         fact_checks_found=fact_checks.matches,
         coverage=coverage,
-        trace=_build_trace(parsed, source_scores, fact_checks, coverage, verdict_mean),
+        trace=_build_trace(parsed, fact_checks, coverage),
         source_credibility=_build_source_credibility(coverage),
         input_type=input_type,
         source_surface=source_surface,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
-
-def _build_trace(parsed: dict, source_scores: dict, fact_checks: FactCheckResults, coverage: CoverageReport, verdict_mean: float) -> VerdictTrace:
+def _build_trace(parsed: dict, fact_checks: FactCheckResults, coverage: CoverageReport) -> VerdictTrace:
     steps = []
 
     if fact_checks.found:
         fc_sources = list({m.source for m in fact_checks.matches[:3]})
         steps.append(VerdictStep(
             step="Fact Check Lookup",
-            finding=f"Found {len(fact_checks.matches)} fact-check(s): {', '.join(fc_sources)}",
+            finding=f"Found {len(fact_checks.matches)} existing fact-check(s) from {', '.join(fc_sources)}",
             weight="high", icon="🔍",
         ))
     else:
         steps.append(VerdictStep(
             step="Fact Check Lookup",
-            finding="No prior fact-checks found",
+            finding="No existing fact-checks found in IFCN-certified sources",
             weight="medium", icon="🔍",
         ))
 
     covering_count = len(coverage.covering)
-    steps.append(VerdictStep(
-        step="Coverage Analysis",
-        finding=f"{covering_count} outlets covering ({len(coverage.covering)} scored)",
-        weight="medium", icon="📰",
-    ))
+    bias = coverage.bias_spread
+    if covering_count > 0:
+        spread = [f"{v} {k}" for k, v in bias.items() if v > 0]
+        steps.append(VerdictStep(
+            step="Coverage Analysis",
+            finding=f"{covering_count} outlet(s) found - bias spread: {', '.join(spread) or 'none detected'}",
+            weight="medium", icon="📰",
+        ))
+    else:
+        steps.append(VerdictStep(
+            step="Coverage Analysis",
+            finding="No Philippine news outlets found covering this story",
+            weight="low", icon="📰",
+        ))
 
+    ai_finding = reasoning_summary = parsed.get("reasoning_summary", "") or (parsed.get("explanation_en", "") or "")[:120]
     steps.append(VerdictStep(
-        step="Source Scoring",
-        finding=f"AI scores e.g. {list(source_scores.items())[:3] if source_scores else 'none'} → weighted mean: {verdict_mean:.1%}",
-        weight="high", icon="⚖️",
-    ))
-
-    ai_reason = parsed.get("reasoning_summary", parsed.get("explanation_en", ""))[:120]
-    steps.append(VerdictStep(
-        step="Final Verdict",
-        finding=ai_reason or "Computed from source weights",
+        step="AI Reasoning",
+        finding=ai_finding or "Verdict derived from available evidence",
         weight="high", icon="🤖",
     ))
 
-    return VerdictTrace(
-        steps=steps,
-        summary=f"Hybrid AI + credibility-weighted scoring (mean={verdict_mean:.1%})",
+    summary = parsed.get(
+        "trace_summary",
+        f"Verdict reached based on {len(fact_checks.matches)} fact-check(s) and {covering_count} outlet(s)."
     )
+    return VerdictTrace(steps=steps, summary=summary)
 
-
-def _build_source_credibility(coverage: CoverageReport) -> list[SourceCredibility]:
+def _build_source_credibility(coverage: CoverageReport) -> List[SourceCredibility]:
     result = []
     for outlet_cov in coverage.covering:
         entry = _REGISTRY.get(outlet_cov.outlet)
@@ -180,43 +318,11 @@ def _build_source_credibility(coverage: CoverageReport) -> list[SourceCredibilit
             outlet=outlet_cov.outlet,
             score=entry.get("credibility_score", 0.5),
             classification=entry.get("credibility_class", "needs_context"),
-            explanation=entry.get("credibility_explanation", ""),
+            explanation=entry.get("credibility_explanation", "placeholder: bading si dion"),
             bias=entry.get("bias", "center"),
         ))
     result.sort(key=lambda x: x.score, reverse=True)
     return result
-
-
-def _fallback_verdict(
-    claim: ExtractedClaim,
-    fact_checks: FactCheckResults,
-    coverage: CoverageReport,
-    input_type: str,
-    source_surface: str,
-) -> Verdict:
-    return Verdict(
-        claim=claim.core_claim,
-        rating="unverified",
-        confidence=0.0,
-        explanation_en="Could not generate verdict — please try again.",
-        explanation_tl="Hindi makabuo ng hatol — subukan muli.",
-        sources=[],
-        fact_checks_found=fact_checks.matches,
-        coverage=coverage,
-        trace=VerdictTrace(
-            steps=[VerdictStep(
-                step="AI Reasoning",
-                finding="Verdict generation failed — model returned unexpected output",
-                weight="high", icon="🤖",
-            )],
-            summary="Analysis incomplete. Please try again.",
-        ),
-        source_credibility=_build_source_credibility(coverage),
-        input_type=input_type,
-        source_surface=source_surface,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-    )
-
 
 def _build_verdict_prompt(
     claim: ExtractedClaim,
@@ -233,7 +339,7 @@ def _build_verdict_prompt(
     covering_names = [o.outlet for o in coverage.covering]
     bias = coverage.bias_spread
 
-    return f"""Evaluate the following claim and return a fact-check verdict.
+    return f"""Evaluate the following claim and return a fact-check verdict explanation.
 
 CLAIM TO EVALUATE:
 "{claim.core_claim}"
@@ -249,21 +355,12 @@ NEWS COVERAGE:
 - Bias spread: Left={bias.get('left', 0)}, Center={bias.get('center', 0)}, Right={bias.get('right', 0)}, State={bias.get('state', 0)}
 
 INSTRUCTIONS:
-1. Weigh the existing fact-checks heavily — they are from verified IFCN fact-checkers
-2. Consider the coverage spread — if only one political side covers a story, flag this
-3. Assign one rating: "true" | "false" | "misleading" | "unverified" | "needs_context"
-4. Assign a confidence score 0.0-1.0 (higher if backed by direct fact-checks)
-5. Write explanation_en in clear English (2-3 sentences)
-6. Write explanation_tl in natural Filipino/Tagalog (2-3 sentences), conversational tone
-7. Write reasoning_summary: one sentence — the KEY reason for your verdict
-8. Write trace_summary: one sentence — summarizing the overall analysis process
-9. List source URLs used
-10. CRITICAL: Assign source_scores ONLY to outlets with feasible/useful claims re: topic (covering outlets + fact-check sources)
-    - Ignore outlets without relevant claims/content
-    - Fact-check \"true\" → 90-100, \"false\" → 0-20
-    - Adjust -20 for bias imbalance
-    - Base on evidence strength, ~50 neutral
-    - Example for outlets with claims only
+1. Use the verdict provided by authoritative fact-checks if available.
+2. If not, rely on cross-referenced source credibility and coverage.
+3. Assign a clear explanation in English and Tagalog.
+4. Provide a concise reasoning summary.
+5. Provide a trace summary summarizing the analysis process.
+6. List all source URLs used.
 
 Respond ONLY with this JSON:
 {{
@@ -272,9 +369,8 @@ Respond ONLY with this JSON:
   "explanation_en": "English explanation here.",
   "explanation_tl": "Paliwanag sa Filipino dito.",
   "reasoning_summary": "One sentence: the key reason for this verdict.",
-"trace_summary": "One sentence: summary of the analysis process.",
-  "sources": ["url1", "url2"],
-  "source_scores": {{"outlet1": 85, "outlet2": 30}}
-}}
+  "trace_summary": "One sentence: summary of the analysis process.",
+  "sources": ["url1", "url2"]
+}}"""
 
 ##kuya dwane/razo pa-update ng no. 4 after implementing credibility/confidence calculation, reference na lang here
