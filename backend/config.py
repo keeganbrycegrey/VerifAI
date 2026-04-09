@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # gemini
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
 
     # google fact check
     GOOGLE_FACTCHECK_API_KEY: str = ""
