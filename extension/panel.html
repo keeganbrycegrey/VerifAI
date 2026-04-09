@@ -2,456 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <style>
-    * { 
-      box-sizing: border-box; 
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      width: 100%;
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f0f;
-      color: #ffffff;
-    }
-    .verifai-panel {
-      width: 100%;
-      height: 100vh;
-      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .verifai-header {
-      background: linear-gradient(135deg, #d1be94 0%, #c9b47a 100%);
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .verifai-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #1a1a1a;
-    }
-    .verifai-subtitle {
-      font-size: 9px;
-      opacity: 0.8;
-      font-weight: 600;
-      color: #1a1a1a;
-    }
-    .verif-close {
-      background: rgba(0, 0, 0, 0.1);
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: #1a1a1a;
-      width: 26px;
-      height: 26px;
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    }
-    .verif-close:hover { background: rgba(0, 0, 0, 0.2); }
-    .verifai-nav {
-      display: flex;
-      background: #0f0f0f;
-      padding: 6px 14px;
-      align-items: center;
-      border-bottom: 1px solid #2a2a2a;
-      gap: 16px;
-      flex-shrink: 0;
-    }
-    .nav-group { display: flex; gap: 14px; }
-    .nav-btn {
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 11px;
-      cursor: pointer;
-      padding: 5px 0;
-      font-weight: 600;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .nav-btn:hover { color: #d1be94; }
-    .nav-btn.active { color: #d1be94; border-bottom-color: #d1be94; }
-    .nav-dash {
-      margin-left: auto;
-      font-size: 16px;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.2s;
-      padding: 4px 6px;
-      border-radius: 4px;
-    }
-    .nav-dash:hover { color: #d1be94; background: rgba(209, 190, 148, 0.1); }
-    .tab-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px;
-    }
-    .tab-content::-webkit-scrollbar { width: 4px; }
-    .tab-content::-webkit-scrollbar-track { background: transparent; }
-    .tab-content::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 2px;
-    }
-    .tab-content::-webkit-scrollbar-thumb:hover { background: #d1be94; }
-    .hidden { display: none !important; }
-    .verdict-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 0;
-      margin-bottom: 10px;
-      overflow: hidden;
-    }
-    .verdict-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      border-bottom: 1px solid #2a2a2a;
-    }
-    .verdict-row:last-child { border-bottom: none; }
-    .verdict-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .verdict-value {
-      font-size: 12px;
-      font-weight: 700;
-      color: #d1be94;
-    }
-    .explanation-section {
-      margin-bottom: 10px;
-    }
-    .explanation-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: #d1be94;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-      display: block;
-    }
-    .explanation-value {
-      font-size: 11px;
-      line-height: 1.4;
-      color: #e0e0e0;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 8px 10px;
-      border-radius: 6px;
-      border-left: 2px solid #d1be94;
-    }
-    .action-group {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .action-btn {
-      flex: 1;
-      background: rgba(209, 190, 148, 0.1);
-      border: 1px solid #333;
-      color: #d1be94;
-      padding: 8px;
-      font-size: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      text-align: center;
-    }
-    .action-btn:hover {
-      background: rgba(209, 190, 148, 0.2);
-      border-color: #d1be94;
-    }
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .history-item {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .history-item:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: #d1be94;
-    }
-    .history-verdict {
-      font-size: 10px;
-      font-weight: 700;
-      color: #d1be94;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .history-claim {
-      font-size: 11px;
-      color: #ccc;
-      margin-bottom: 6px;
-      line-height: 1.3;
-      word-break: break-word;
-    }
-    .history-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #888;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 30px 16px;
-      color: #666;
-    }
-    .empty-state-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-      opacity: 0.5;
-    }
-    .empty-state-text {
-      font-size: 11px;
-      line-height: 1.4;
-    }
-    .detail-view.hidden { display: none; }
-    .detail-view {
-      height: 100%;
-      overflow-y: auto;
-      padding: 12px;
-    }
-    .detail-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #2a2a2a;
-    }
-    .detail-back {
-      background: rgba(209, 190, 148, 0.1);
-      border: 1px solid #2a2a2a;
-      color: #d1be94;
-      font-size: 11px;
-      cursor: pointer;
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .detail-back:hover {
-      background: rgba(209, 190, 148, 0.2);
-      border-color: #d1be94;
-    }
-    .detail-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .detail-claim-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    .detail-claim-label {
-      font-size: 9px;
-      font-weight: 700;
-      color: #d1be94;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-      display: block;
-    }
-    .detail-claim-text {
-      font-size: 11px;
-      line-height: 1.4;
-      color: #e0e0e0;
-      word-break: break-word;
-    }
-    .detail-section {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    .detail-section-label {
-      font-size: 9px;
-      font-weight: 700;
-      color: #d1be94;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-      display: block;
-    }
-    .detail-section-content {
-      font-size: 11px;
-      line-height: 1.4;
-      color: #e0e0e0;
-      word-break: break-word;
-    }
-    .rating-true { color: #22c55e; }
-    .rating-false { color: #ef4444; }
-    .rating-misleading { color: #f97316; }
-    .rating-needs_context { color: #3b82f6; }
-    .rating-unverified { color: #94a3b8; }
-
-    /* trace section */
-    .trace-section {
-      margin-bottom: 10px;
-    }
-    .trace-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: #d1be94;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-      display: block;
-    }
-    .trace-step {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      padding: 7px 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 6px;
-      margin-bottom: 5px;
-    }
-    .trace-icon {
-      font-size: 14px;
-      flex-shrink: 0;
-      line-height: 1.4;
-    }
-    .trace-body {
-      flex: 1;
-      min-width: 0;
-    }
-    .trace-step-name {
-      font-size: 9px;
-      font-weight: 700;
-      color: #d1be94;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 2px;
-    }
-    .trace-finding {
-      font-size: 10px;
-      color: #ccc;
-      line-height: 1.35;
-      word-break: break-word;
-    }
-    .trace-weight {
-      font-size: 8px;
-      font-weight: 600;
-      padding: 1px 5px;
-      border-radius: 3px;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    .weight-high   { background: rgba(34,197,94,0.15);  color: #22c55e; }
-    .weight-medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
-    .weight-low    { background: rgba(148,163,184,0.15);color: #94a3b8; }
-    .trace-summary {
-      font-size: 10px;
-      color: #888;
-      font-style: italic;
-      padding: 6px 8px;
-      background: rgba(255,255,255,0.02);
-      border-radius: 4px;
-      margin-top: 4px;
-      line-height: 1.35;
-    }
-
-    /* source credibility section */
-    .cred-section {
-      margin-bottom: 10px;
-    }
-    .cred-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid #2a2a2a;
-      border-radius: 6px;
-      margin-bottom: 4px;
-    }
-    .cred-outlet {
-      font-size: 10px;
-      font-weight: 600;
-      color: #ccc;
-      flex: 1;
-      min-width: 0;
-    }
-    .cred-score-bar {
-      width: 48px;
-      height: 4px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 2px;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .cred-score-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.4s ease;
-    }
-    .cred-pct {
-      font-size: 9px;
-      color: #888;
-      width: 26px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-    .cred-badge {
-      font-size: 8px;
-      font-weight: 700;
-      padding: 1px 5px;
-      border-radius: 3px;
-      flex-shrink: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .cred-highly_reliable    { background: rgba(34,197,94,0.15);   color: #22c55e; }
-    .cred-generally_reliable { background: rgba(96,165,250,0.15);  color: #60a5fa; }
-    .cred-needs_context      { background: rgba(251,191,36,0.15);  color: #fbbf24; }
-    .cred-state_media        { background: rgba(249,115,22,0.15);  color: #f97316; }
-    .cred-unreliable         { background: rgba(239,68,68,0.15);   color: #ef4444; }
-  </style>
+  <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <div class="verifai-panel">
     <div class="verifai-header">
-      <div>
-        <div class="verifai-title">VerifAI</div>
-        <div class="verifai-subtitle">Fact Checker</div>
+      <div class="header-content">
+        <div class="verifai-title">VERIFAI</div>
+        <div class="verifai-subtitle">Fact Checker PH</div>
       </div>
-      <button class="verif-close" id="verif-close">✕</button>
+      <button class="verif-close" id="verif-close">×</button>
     </div>
+    
     <nav class="verifai-nav">
       <div class="nav-group">
         <button id="btn-checker" class="nav-btn active">Checker</button>
@@ -459,87 +21,74 @@
       </div>
       <span class="nav-dash" id="btn-dashboard" title="Open Dashboard">⊞</span>
     </nav>
-    <div id="tab-checker" class="tab-content">
-      <div class="verdict-card">
-        <div class="verdict-row">
-          <span class="verdict-label">Verdict</span>
-          <span id="verif-verdict" class="verdict-value">—</span>
+    
+    <div id="loading-state" class="loading-container">
+      <div class="loading-wrapper">
+        <div class="loading-spinner"></div>
+        <div class="loading-glow"></div>
+      </div>
+      <div class="loading-text">
+        Verifying claim
+        <div class="loading-dots">
+          <span>.</span><span>.</span><span>.</span>
         </div>
-        <div class="verdict-row">
-          <span class="verdict-label">Confidence</span>
-          <span id="verif-confidence" class="verdict-value">—</span>
-        </div>
-        <div class="verdict-row">
-          <span class="verdict-label">Source</span>
-          <span id="verif-source" class="verdict-value">—</span>
-        </div>
-      </div>
-
-      <div class="explanation-section">
-        <label class="explanation-label">Explanation (EN)</label>
-        <div id="verif-explanation-en" class="explanation-value">—</div>
-      </div>
-
-      <div class="explanation-section">
-        <label class="explanation-label">Paliwanag (TL)</label>
-        <div id="verif-explanation-tl" class="explanation-value">—</div>
-      </div>
-
-      <!-- reasoning trace — populated by content.js update_panel_ui -->
-      <div class="trace-section" id="verif-trace-section" style="display:none">
-        <label class="trace-label">🧠 How we got here</label>
-        <div id="verif-trace-steps"></div>
-        <div class="trace-summary" id="verif-trace-summary"></div>
-      </div>
-
-      <!-- source credibility — populated by content.js update_panel_ui -->
-      <div class="cred-section" id="verif-cred-section" style="display:none">
-        <label class="trace-label">📊 Source credibility</label>
-        <div id="verif-cred-list"></div>
-      </div>
-
-      <div class="action-group">
-        <button class="action-btn" id="btn-copy">Copy</button>
-        <button class="action-btn" id="btn-report">Report</button>
       </div>
     </div>
-    <div id="tab-history" class="tab-content hidden">
-      <div id="history-list" class="history-list"></div>
-    </div>
-    <div id="detail-view" class="detail-view hidden">
-      <div class="detail-header">
-        <button class="detail-back" id="detail-back">← Back</button>
-        <span class="detail-title">Claim Details</span>
-      </div>
-
-      <div class="verdict-card">
-        <div class="verdict-row">
-          <span class="verdict-label">Verdict</span>
-          <span id="detail-verdict" class="verdict-value">—</span>
+    
+    <div id="content-state" class="content-container hidden">
+      <div id="tab-checker" class="tab-content">
+        <div class="verdict-card" id="main-verdict-card">
+          <div class="verdict-row">
+            <span class="verdict-label">Verdict</span>
+            <span id="verif-verdict" class="verdict-value">—</span>
+          </div>
+          <div class="verdict-row">
+            <span class="verdict-label">Confidence</span>
+            <span id="verif-confidence" class="verdict-value">—</span>
+          </div>
+          <div class="verdict-row">
+            <span class="verdict-label">Source</span>
+            <span id="verif-source" class="verdict-value">—</span>
+          </div>
         </div>
-        <div class="verdict-row">
-          <span class="verdict-label">Confidence</span>
-          <span id="detail-confidence" class="verdict-value">—</span>
+
+        <div class="explanation-section card-glow">
+          <label class="explanation-label">Explanation</label>
+          <div id="verif-explanation-en" class="explanation-value">—</div>
         </div>
-        <div class="verdict-row">
-          <span class="verdict-label">Checked On</span>
-          <span id="detail-timestamp" class="verdict-value" style="font-size: 10px;">—</span>
+
+        <div class="explanation-section card-glow">
+          <label class="explanation-label">Paliwanag</label>
+          <div id="verif-explanation-tl" class="explanation-value">—</div>
+        </div>
+
+        <div class="trace-section hidden" id="verif-trace-section">
+          <label class="trace-label">How we got here</label>
+          <div id="verif-trace-steps"></div>
+          <div class="trace-summary" id="verif-trace-summary"></div>
+        </div>
+
+        <div class="cred-section hidden" id="verif-cred-section">
+          <label class="trace-label">Source credibility</label>
+          <div id="verif-cred-list"></div>
+        </div>
+
+        <div class="action-group">
+          <button class="action-btn" id="btn-copy">Copy Result</button>
+          <button class="action-btn" id="btn-report">Report Error</button>
         </div>
       </div>
-
-      <div class="detail-claim-card">
-        <label class="detail-claim-label">Full Claim</label>
-        <div id="detail-claim" class="detail-claim-text">—</div>
+      
+      <div id="tab-history" class="tab-content hidden">
+        <div id="history-list" class="history-list"></div>
       </div>
-
-      <div class="detail-section">
-        <label class="detail-section-label">Explanation (EN)</label>
-        <div id="detail-explanation-en" class="detail-section-content">—</div>
-      </div>
-
-      <div class="detail-section">
-        <label class="detail-section-label">Paliwanag (TL)</label>
-        <div id="detail-explanation-tl" class="detail-section-content">—</div>
+      
+      <div id="detail-view" class="detail-view hidden">
+        <div class="detail-header">
+          <button class="detail-back" id="detail-back">← Back</button>
+          <span class="detail-title">Claim Details</span>
+        </div>
+        <div id="detail-content"></div>
       </div>
     </div>
   </div>

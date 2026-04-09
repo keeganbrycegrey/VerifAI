@@ -23,7 +23,9 @@ def _get_client() -> Client:
 
 
 async def save_verdict(verdict: Verdict) -> None:
+    """Insert a new verdict or update the existing row for the same claim (upsert).    """
     try:
+        db = _get_client()
         row = {
             "claim":              verdict.claim,
             "rating":             verdict.rating,
@@ -39,9 +41,27 @@ async def save_verdict(verdict: Verdict) -> None:
             "trace":              verdict.trace.model_dump() if verdict.trace else None,
             "source_credibility": [sc.model_dump() for sc in verdict.source_credibility],
         }
-        _get_client().table("verdicts").insert(row).execute()
+        # Try native upsert (requires unique constraint on 'claim' in Supabase)
+        db.table("verdicts").upsert(row, on_conflict="claim").execute()
     except Exception as e:
-        print(f"supabase save error: {e}")
+        print(f"supabase upsert error (falling back to insert): {e}")
+        try:
+            # Fallback: manual check-then-update so a failed upsert never silently drops data
+            existing = (
+                _get_client().table("verdicts")
+                .select("id")
+                .ilike("claim", verdict.claim.strip())
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                row_id = existing.data[0]["id"]
+                _get_client().table("verdicts").update(row).eq("id", row_id).execute()
+                print(f"supabase fallback: updated existing row id={row_id}")
+            else:
+                _get_client().table("verdicts").insert(row).execute()
+        except Exception as e2:
+            print(f"supabase save error: {e2}")
 
 
 async def get_recent_verdicts(limit: int = 20) -> list[VerdictSummary]:
