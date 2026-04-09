@@ -349,9 +349,9 @@ function update_panel_ui(shadow, data, errorMsg) {
     const confidence = Math.round((data.confidence ?? 0) * 100)
     const sourceUrl = (data.sources && data.sources[0]) || data.source_surface || 'VerifAI Cache'
 
-    const verdict_el     = shadow.getElementById('verif-verdict')
-    const confidence_el  = shadow.getElementById('verif-confidence')
-    const source_el      = shadow.getElementById('verif-source')
+    const verdict_el = shadow.getElementById('verif-verdict')
+    const confidence_el = shadow.getElementById('verif-confidence')
+    const source_el = shadow.getElementById('verif-source')
     const explanation_en = shadow.getElementById('verif-explanation-en')
     const explanation_tl = shadow.getElementById('verif-explanation-tl')
 
@@ -363,11 +363,9 @@ function update_panel_ui(shadow, data, errorMsg) {
     if (source_el) source_el.innerText = `Source: ${sourceUrl}`
     if (explanation_en) explanation_en.innerText = data.explanation_en || ''
     if (explanation_tl) explanation_tl.innerText = data.explanation_tl || ''
-
-    // ── verdict trace ──────────────────────────────────────────────────────────
-    const traceSection  = shadow.getElementById('verif-trace-section')
-    const traceStepsEl  = shadow.getElementById('verif-trace-steps')
-    const traceSummary  = shadow.getElementById('verif-trace-summary')
+    const traceSection = shadow.getElementById('verif-trace-section')
+    const traceStepsEl = shadow.getElementById('verif-trace-steps')
+    const traceSummary = shadow.getElementById('verif-trace-summary')
 
     if (traceSection && data.trace && data.trace.steps && data.trace.steps.length > 0) {
         const weightClass = { high: 'weight-high', medium: 'weight-medium', low: 'weight-low' }
@@ -388,10 +386,8 @@ function update_panel_ui(shadow, data, errorMsg) {
     } else if (traceSection) {
         traceSection.style.display = 'none'
     }
-
-    // ── source credibility ─────────────────────────────────────────────────────
     const credSection = shadow.getElementById('verif-cred-section')
-    const credList    = shadow.getElementById('verif-cred-list')
+    const credList = shadow.getElementById('verif-cred-list')
 
     if (credSection && data.source_credibility && data.source_credibility.length > 0) {
         const scoreColor = (score) => {
