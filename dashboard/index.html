@@ -1,174 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VerifAI Dashboard</title>
 <style>
   * { box-sizing: border-box; }
-  
-  :root {
-    --bg-dark: #0d1117;
-    --card-bg: #161b22;
-    --border-color: #30363d;
-    --accent-yellow: #ffcc00;
-    --accent-red: #da291c;
-    --text-main: #f0f6fc;
-    --text-muted: #8b949e;
-  }
-
-  body { 
-    margin: 0; 
-    background: var(--bg-dark); 
-    color: var(--text-main); 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
-    padding: 24px; 
-  }
-
+  body { margin: 0; background: #121212; color: white; font-family: Cambria, serif; padding: 20px; }
   .dashboard-container {
     display: grid;
-    grid-template-columns: 20% 30% 20% 1fr;
-    grid-template-rows: 160px 160px auto;
-    gap: 16px;
+    grid-template-columns: 18% 28% 18% 1fr;
+    grid-template-rows: 140px 140px auto;
+    gap: 12px;
     height: 90vh;
-    max-width: 1600px;
-    margin: 0 auto;
   }
-
   .box {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
+    background: #1e1e1e;
+    border: 1px solid rgba(209, 180, 148, 0.2);
+    border-radius: 0px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  .box:hover {
-    border-color: var(--text-muted);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
-    transform: translateY(-2px);
-  }
-
-  .usage-today { 
-    grid-column: 1; grid-row: 1; 
-    border: 2px solid var(--accent-yellow);
-    box-shadow: 0 0 12px rgba(255, 204, 0, 0.1);
-  }
-
-  .usage-today:hover {
-    border-color: #ffe066;
-    box-shadow: 0 0 25px rgba(255, 204, 0, 0.25);
-  }
-
-  .highest-usage { 
-    grid-column: 1; grid-row: 2; 
-    border: 2px solid var(--accent-red);
-    box-shadow: 0 0 12px rgba(218, 41, 28, 0.1);
-  }
-
-  .highest-usage:hover {
-    border-color: #ff4d3d;
-    box-shadow: 0 0 25px rgba(218, 41, 28, 0.25);
-  }
-
+  .usage-today     { grid-column: 1; grid-row: 1; }
+  .highest-usage   { grid-column: 1; grid-row: 2; }
   .daily-usage     { grid-column: 2; grid-row: 1 / span 2; }
   .bias-registry   { grid-column: 3; grid-row: 1 / span 2; }
   .verdict-feed    { grid-column: 4; grid-row: 1 / span 3; }
   .trending-claims { grid-column: 1 / span 3; grid-row: 3; }
 
-  h2 { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
-  .big-number { font-size: 52px; color: var(--text-main); font-weight: 800; margin: 5px 0; }
+  h2 { font-size: 18px; color: #ffffff; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px; }
+  .big-number { font-size: 48px; color: #d1be94; font-weight: bold; margin: 0; }
+  .scroll-content { flex-grow: 1; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; font-size: 13px; color: #a0a0a0; overflow-y: auto; }
 
-  .scroll-content { flex-grow: 1; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; font-size: 13px; overflow-y: auto; }
-  .scroll-content::-webkit-scrollbar { width: 6px; }
-  .scroll-content::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-
-  .graph-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    margin-top: 10px;
+  .graph-frame { display: flex; align-items: flex-end; height: 100%; position: relative; margin-top: auto; }
+  .y-axis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 100%; padding-top: 20px; padding-right: 10px; font-size: 10px; color: #666; width: 30px; }
+  .graph-body {
+    flex-grow: 1; height: 180px;
+    background: rgba(255,255,255,0.03);
+    display: flex; align-items: flex-end; justify-content: space-around;
+    padding: 0 5px; position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
   }
-
-  .graph-area {
-    display: flex;
-    flex-grow: 1;
-    position: relative;
-    height: 180px; 
-  }
-
-  .y-axis-container {
-    width: 35px;
-    position: relative;
-    height: 100%;
-  }
-
-  .y-label {
-    position: absolute;
-    right: 8px;
-    font-size: 10px;
-    color: var(--text-muted);
-    transform: translateY(50%);
-  }
-
-  .graph-main {
-    flex-grow: 1;
-    position: relative;
-    height: 100%;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    padding: 0 10px;
-  }
-
-  .grid-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    border-top: 1px dashed rgba(255,255,255,0.08);
-    pointer-events: none;
-  }
-
-  .bar-group {
-    position: relative;
-    width: 30px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    z-index: 2;
-  }
-
-  .bar {
-    width: 80%;
-    background: var(--accent-yellow);
-    border-radius: 4px 4px 0 0;
-    transition: height 0.6s ease;
-  }
-
-  .bar-val {
-    position: absolute;
-    font-size: 10px;
-    font-weight: bold;
-    color: var(--accent-yellow);
-    bottom: calc(var(--h) + 4px);
-  }
-
-  .x-axis {
-    display: flex;
-    justify-content: space-around;
-    padding-left: 35px;
-    margin-top: 10px;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
-  .bias-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; width: 25px; z-index: 2; height: 100%; justify-content: flex-end; }
+  .bar-num { font-size: 11px; margin-bottom: 4px; color: #d1be94; font-weight: bold; }
+  .bar { width: 80%; background: #d1be94; border-radius: 2px 2px 0 0; transition: height 0.5s ease; }
+  .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,0.05); z-index: 1; width: 100%; }
+  .x-axis { display: flex; justify-content: space-around; padding-left: 40px; padding-right: 5px; margin-top: 8px; font-size: 12px; color: #666; }
 </style>
 </head>
 <body>
@@ -177,25 +53,23 @@
   <div class="box usage-today">
     <h2>Today's Usage</h2>
     <div id="TODAY-VAL" class="big-number">—</div>
-    <div id="CURRENT-DATE" style="color: var(--accent-yellow); font-size: 14px;">Loading...</div>
+    <div id="CURRENT-DATE" style="color: #d1be94">Loading...</div>
   </div>
 
   <div class="box highest-usage">
-    <h2>Total Checks</h2>
+    <h2>All Time</h2>
     <div id="HIGH-VAL" class="big-number">—</div>
-    <div style="color: var(--accent-red); font-size: 14px; font-weight: 600;">Lifetime Network Activity</div>
+    <div style="color: #d1be94">total checks</div>
   </div>
 
   <div class="box daily-usage">
-    <h2>Daily Activity</h2>
-    <div style="color: var(--text-muted); font-size: 12px;">PAST 7 DAYS</div>
-    <div class="graph-wrapper">
-      <div class="graph-area">
-        <div class="y-axis-container" id="Y-CONTAINER"></div>
-        <div class="graph-main" id="G-MAIN"></div>
-      </div>
-      <div class="x-axis"><span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span></div>
+    <h2>Daily Usage</h2>
+    <div style="color: #d1be94">LAST 7 DAYS</div>
+    <div class="graph-frame">
+      <div class="y-axis" id="Y-AXIS"></div>
+      <div class="graph-body" id="G"></div>
     </div>
+    <div class="x-axis"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
   </div>
 
   <div class="box bias-registry">
@@ -204,7 +78,7 @@
   </div>
 
   <div class="box verdict-feed">
-    <h2>Live Verdict Feed</h2>
+    <h2>Verdict Feed</h2>
     <div id="VERDICT-LIST" class="scroll-content">Loading...</div>
   </div>
 
@@ -217,82 +91,119 @@
 <script>
   const BASE_URL = "https://verifai-production-4119.up.railway.app" 
 
-  const RATING_EMOJI = { true: "✅", false: "❌", misleading: "⚠️", unverified: "🔍", needs_context: "ℹ️" };
-  const BIAS_COLORS = { left: "#60a5fa", center: "#9ca3af", right: "#f87171", state: "#fbbf24", aggregator: "#a78bfa" };
+  const RATING_EMOJI = {
+    true: "✅", false: "❌", misleading: "⚠️",
+    unverified: "🔍", needs_context: "ℹ️",
+  }
+
+  const BIAS_COLORS = {
+    left: "#60a5fa", center: "#9ca3af",
+    right: "#f87171", state: "#fbbf24", aggregator: "#a78bfa",
+  }
+
   const BIAS_REGISTRY = {
-    "Rappler": {bias:"left"}, "GMA News": {bias:"center"}, "Inquirer": {bias:"center"}, "Philippine News Agency": {bias:"state"},
-    "Business Mirror": {bias:"center"}, "Eagle News": {bias:"right"}, "Google News PH": {bias:"aggregator"}, "ABS-CBN News": {bias:"center"},
-    "PhilStar": {bias:"center"}, "Manila Bulletin": {bias:"right"}, "Manila Standard": {bias:"right"}, "One News PH": {bias:"center"},
-    "CNN Philippines": {bias:"center"}, "VERA Files": {bias:"left"}
-  };
+    "Rappler":                { bias: "left"       },
+    "GMA News":               { bias: "center"     },
+    "Inquirer":               { bias: "center"     },
+    "Philippine News Agency": { bias: "state"      },
+    "Business Mirror":        { bias: "center"     },
+    "Eagle News":             { bias: "right"      },
+    "Google News PH":         { bias: "aggregator" },
+    "ABS-CBN News":           { bias: "center"     },
+    "PhilStar":               { bias: "center"     },
+    "Manila Bulletin":        { bias: "right"      },
+    "Manila Standard":        { bias: "right"      },
+    "One News PH":            { bias: "center"     },
+    "CNN Philippines":        { bias: "center"     },
+    "VERA Files":             { bias: "left"       },
+  }
 
   async function updateDashboard() {
-    document.getElementById("CURRENT-DATE").innerText = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 
-    document.getElementById("BIAS-LIST").innerHTML = Object.entries(BIAS_REGISTRY).map(([name, info]) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:12px">
-        <span style="color:var(--text-main)">${name}</span>
-        <span class="bias-badge" style="color:${BIAS_COLORS[info.bias]}; border: 1px solid ${BIAS_COLORS[info.bias]}44; background:${BIAS_COLORS[info.bias]}11">${info.bias}</span>
-      </div>`).join("");
+    // date
+    document.getElementById("CURRENT-DATE").innerText =
+      new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
 
+    // bias registry — static, no api needed
+    document.getElementById("BIAS-LIST").innerHTML =
+      Object.entries(BIAS_REGISTRY).map(([name, info]) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px">
+          <span style="color:#d0d0d0">${name}</span>
+          <span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;
+            color:${BIAS_COLORS[info.bias]};background:${BIAS_COLORS[info.bias]}22">${info.bias}</span>
+        </div>`
+      ).join("")
+
+    // feed — counts + verdicts + trending
     try {
-      const feed = await fetch(`${BASE_URL}/dashboard/feed`).then(r => r.json());
-      document.getElementById("TODAY-VAL").innerText = feed.total_checks_today ?? "—";
-      document.getElementById("HIGH-VAL").innerText  = feed.total_checks_all_time ?? "—";
+      const feed = await fetch(`${BASE_URL}/dashboard/feed`).then(r => r.json())
 
+      document.getElementById("TODAY-VAL").innerText = feed.total_checks_today ?? "—"
+      document.getElementById("HIGH-VAL").innerText  = feed.total_checks_all_time ?? "—"
+
+      // verdict feed
       if (feed.recent_verdicts?.length) {
-        document.getElementById("VERDICT-LIST").innerHTML = feed.recent_verdicts.map(v => `
-          <div style="border-bottom:1px solid var(--border-color);padding:10px 0">
-            <div style="font-size:11px;font-weight:bold;text-transform:uppercase;color:var(--accent-yellow)">${RATING_EMOJI[v.rating] || "🔍"} ${v.rating.replace("_"," ")}</div>
-            <div style="font-size:13px;color:var(--text-main);margin:4px 0;line-height:1.4">${v.claim}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${Math.round(v.confidence * 100)}% Confidence • ${v.source_surface}</div>
-          </div>`).join("");
+        document.getElementById("VERDICT-LIST").innerHTML = feed.recent_verdicts.map(v => {
+          const emoji = RATING_EMOJI[v.rating] || "🔍"
+          const pct   = Math.round(v.confidence * 100)
+          const time  = new Date(v.timestamp).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
+          return `
+            <div style="border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 0">
+              <div style="font-size:10px;font-weight:bold;text-transform:uppercase">${emoji} ${v.rating.replace("_"," ")}</div>
+              <div style="font-size:11px;color:#d0d0d0;margin:2px 0;line-height:1.4">${v.claim}</div>
+              <div style="font-size:10px;color:#555">${pct}% · ${v.source_surface} · ${time}</div>
+            </div>`
+        }).join("")
       }
 
+      // trending — fixed: use t.claim not ${t}
       if (feed.trending?.length) {
         document.getElementById("TRENDING-LIST").innerHTML = feed.trending.map((t, i) => `
-          <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-color)">
-            <span style="color:var(--accent-red);font-weight:bold;min-width:20px">#${i + 1}</span>
-            <span style="font-size:13px;color:var(--text-main);flex-grow:1">${t.claim}</span>
-            <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px">${t.check_count} checks</span>
-          </div>`).join("");
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+            <span style="color:#d1be94;font-weight:bold;min-width:18px">${i + 1}</span>
+            <span style="font-size:11px;color:#d0d0d0;flex-grow:1">${t.claim}</span>
+            <span style="font-size:10px;color:#555;white-space:nowrap">${t.check_count}x</span>
+          </div>`
+        ).join("")
       }
+
     } catch (e) { console.warn("feed error:", e) }
 
+    // daily graph
     try {
-      const json = await fetch(`${BASE_URL}/dashboard/daily`).then(r => r.json());
-      const data = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0);
-      const yContainer = document.getElementById('Y-CONTAINER');
-      const gMain = document.getElementById('G-MAIN');
-      
-      const maxVal = Math.max(...data);
-      const ceiling = maxVal > 8 ? Math.ceil(maxVal * 1.2) : 10;
-      
-      yContainer.innerHTML = '';
-      gMain.innerHTML = '';
+      const json  = await fetch(`${BASE_URL}/dashboard/daily`).then(r => r.json())
+      const data  = Array.from({ length: 7 }, (_, i) => json.daily?.[String(i)] || 0)
+      const target = document.getElementById('G')
+      const yAxis  = document.getElementById('Y-AXIS')
 
-      const steps = 5; 
-      for (let i = 0; i < steps; i++) {
-        const val = Math.round((ceiling / (steps - 1)) * i);
-        const bottomPercent = (i / (steps - 1)) * 100;
-        
-        yContainer.insertAdjacentHTML('beforeend', `<span class="y-label" style="bottom: ${bottomPercent}%">${val}</span>`);
-        gMain.insertAdjacentHTML('beforeend', `<div class="grid-line" style="bottom: ${bottomPercent}%"></div>`);
+      const maxVal       = Math.max(...data)
+      const graphCeiling = Math.ceil(maxVal + (maxVal * 0.2)) || 10
+
+      target.innerHTML = ''
+      yAxis.innerHTML  = ''
+
+      for (let i = 0; i <= 4; i++) {
+        const val = Math.round((graphCeiling / 4) * i)
+        yAxis.insertAdjacentHTML('beforeend', `<span>${val}</span>`)
+        target.insertAdjacentHTML('beforeend',
+          `<div class="grid-line" style="bottom: ${(i / 4) * 100}%"></div>`)
       }
 
       data.forEach(val => {
-        const h = (val / ceiling) * 100;
-        gMain.insertAdjacentHTML('beforeend', `
-          <div class="bar-group" style="--h: ${h}%">
-            <div class="bar-val">${val > 0 ? val : ''}</div>
-            <div class="bar" style="height: ${val === 0 ? '4px' : h + '%'}; background: ${val === 0 ? 'rgba(255,255,255,0.03)' : 'var(--accent-yellow)'}"></div>
-          </div>`);
-      });
+        const percentage = (val / graphCeiling) * 100
+        const barColor   = val === 0 ? "rgba(255,255,255,0.08)" : "#d1be94"
+        target.insertAdjacentHTML('beforeend', `
+          <div class="bar-group">
+            <div class="bar-num">${val > 0 ? val : ''}</div>
+            <div class="bar" style="height: ${val === 0 ? 100 : percentage}%; background: ${barColor}"></div>
+          </div>`)
+      })
+
     } catch (e) { console.warn("graph error:", e) }
   }
 
-  updateDashboard();
-  setInterval(updateDashboard, 30000);
+  updateDashboard()
+  setInterval(updateDashboard, 30000)
 </script>
 
 </body>

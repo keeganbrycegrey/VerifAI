@@ -6,7 +6,8 @@ import json
 import statistics
 from datetime import datetime, timezone
 from pathlib import Path
-from groq import Groq
+import google.generativeai as genai
+from google.generativeai import types
 from models import (
     ExtractedClaim, FactCheckResults, CoverageReport, Verdict,
     VerdictTrace, VerdictStep, SourceCredibility,
@@ -96,18 +97,34 @@ _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
 with open(_REGISTRY_PATH) as f:
     _REGISTRY: dict = json.load(f)["outlets"]
 
-_client = None
+_model = None
+
 
 def _gemini():
     global _model
     if _model is None:
         if not settings.GEMINI_API_KEY:
             raise ValueError(
-                "GROQ_API_KEY is not configured in .env. "
-                "Get your key from: https://console.groq.com/keys"
+                "GEMINI_API_KEY is not configured in .env. "
+                "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        _client = Groq(api_key=settings.GROQ_API_KEY)
-    return _client
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        _model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=(
+                "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
+                "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
+                "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON.\n\n"
+                "You are an expert fact-checker for Philippine news and information. "
+                "You analyze claims using evidence and give clear verdicts. "
+                "Always respond with valid JSON only."
+            ),
+            generation_config=types.GenerationConfig(
+                temperature=0.2,
+                response_mime_type="application/json",
+            ),
+        )
+    return _model
 
 
 async def generate_verdict(
@@ -119,28 +136,9 @@ async def generate_verdict(
 ) -> Verdict:
 
     prompt = _build_verdict_prompt(claim, fact_checks, coverage)
+    response = _gemini().generate_content(prompt)
 
-    response = _groq().chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
-                    "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
-                    "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON.\n\n"
-                    "You are an expert fact-checker for Philippine news and information. "
-                    "You analyze claims using evidence and give clear verdicts. "
-                    "Always respond with valid JSON only."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-        max_tokens=1024
-    )
-
-    raw = response.choices[0].message.content.strip()
+    raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

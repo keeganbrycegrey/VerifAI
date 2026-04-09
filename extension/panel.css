@@ -1,221 +1,88 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-:root {
-  --bg-dark: #0d1117;
-  --card-bg: #161b22;
-  --border-color: #30363d;
-  --accent-yellow: #ffcc00;
-  --accent-blue: #3b82f6;
-  --text-main: #f0f6fc;
-  --text-muted: #8b949e;
-}
-
-body {
-  width: 100%;
-  margin: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
-  background: var(--bg-dark);
-  color: var(--text-main);
-}
-
 .verifai-panel {
-  width: 100%;
-  height: 100vh;
-  background: var(--bg-dark);
-  display: flex;
-  flex-direction: column;
+  width: 340px;
+  max-width: 90vw;
+  background: #0b0f1a;
+  color: #f1f5ff;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
 }
 
 .verifai-header {
-  background: var(--card-bg);
-  padding: 14px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
+  padding: 12px 14px;
+  background: linear-gradient(90deg, #2b2f63, #0b0f1a);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .verifai-title {
   font-size: 16px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #fff 0%, var(--accent-yellow) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-weight: 700;
 }
 
 .verifai-subtitle {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
 }
 
-.verif-close {
-  background: rgba(255, 255, 255, 0.05);
+.verifai-close {
   border: none;
-  color: var(--text-muted);
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.verif-close:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.verifai-nav {
-  display: flex;
-  padding: 0 16px;
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--border-color);
-  align-items: center;
-}
-
-.nav-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 12px 16px;
-  cursor: pointer;
-  text-transform: uppercase;
-  border-bottom: 2px solid transparent;
-}
-
-.nav-btn.active {
-  color: var(--accent-blue);
-  border-bottom-color: var(--accent-blue);
-}
-
-.nav-dash {
-  margin-left: auto;
-  color: var(--text-muted);
-  cursor: pointer;
+  background: transparent;
+  color: rgba(255,255,255,0.9);
   font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 }
 
-.loading-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-dark);
+.verifai-body {
+  padding: 14px;
 }
 
-.loading-wrapper {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  margin-bottom: 20px;
-}
-
-.loading-spinner {
-  width: 100%;
-  height: 100%;
-  border: 3px solid rgba(59, 130, 246, 0.1);
-  border-top: 3px solid var(--accent-blue);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.loading-glow {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: var(--accent-blue);
-  border-radius: 50%;
-  filter: blur(15px);
-  opacity: 0.2;
-  animation: pulse 2s infinite;
-}
-
-@keyframes spin { 100% { transform: rotate(360deg); } }
-@keyframes pulse { 0%, 100% { opacity: 0.1; transform: scale(0.8); } 50% { opacity: 0.3; transform: scale(1.1); } }
-
-.loading-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  display: flex;
-  gap: 4px;
-}
-
-.loading-dots span {
-  animation: blink 1.4s infinite both;
-}
-.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
-
-.content-container { flex: 1; overflow-y: auto; }
-
-.verdict-card, .explanation-section, .history-item {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  margin-bottom: 16px;
-  padding: 16px;
-  transition: all 0.3s ease;
-}
-
-.verdict-card:hover, .explanation-section:hover, .history-item:hover {
-  border-color: var(--text-muted);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
-  transform: translateY(-1px);
-}
-
-.verdict-row {
+.verifai-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-.verdict-row:last-child { border: none; }
-
-.verdict-label, .explanation-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: 10px;
 }
 
-.verdict-value { font-weight: 700; font-size: 14px; }
-
-.explanation-value {
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #d1d5db;
-}
-
-.action-group { display: flex; gap: 10px; padding: 0 16px 20px; }
-.action-btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: rgba(255,255,255,0.03);
-  color: var(--text-main);
-  font-size: 11px;
+.verifai-label {
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: rgba(255,255,255,0.75);
 }
-.action-btn:hover { background: var(--accent-blue); border-color: var(--accent-blue); }
 
-.rating-true { color: #22c55e; }
-.rating-false { color: #ef4444; }
-.rating-misleading { color: #f97316; }
+.verifai-value {
+  font-weight: 700;
+  text-align: right;
+}
 
-.hidden { display: none !important; }
+.verifai-explanation {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+}
+
+.verifai-explanation-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: rgba(255,255,255,0.8);
+}
+
+.verifai-explanation-value {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.9);
+}
+
+#verif-verdict {
+  text-transform: uppercase;
+}
+
+#verif-verdict.text-true { color: #34d399; }
+#verif-verdict.text-false { color: #f87171; }
+#verif-verdict.text-misleading { color: #fbbf24; }
+#verif-verdict.text-unverified { color: #94a3b8; }
+#verif-verdict.text-needs_context { color: #60a5fa; }

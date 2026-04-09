@@ -1,48 +1,44 @@
 # extracts single verifiable claim from text
-# uses groq (llama-3.3-70b) with low temperature
+# uses gemini-1.5-flash with low temperature
 
 import json
-from groq import Groq
+import google.generativeai as genai
+from google.generativeai import types
 from models import PreprocessedInput, ExtractedClaim
 from config import get_settings
 
 settings = get_settings()
 
-_client = None
+_model = None
 
-def _groq():
-    global _client
-    if _client is None:
-        if not settings.GROQ_API_KEY:
+def _gemini():
+    global _model
+    if _model is None:
+        if not settings.GEMINI_API_KEY:
             raise ValueError(
-                "GROQ_API_KEY is not configured in .env. "
-                "Get your key from: https://console.groq.com/keys"
+                "GEMINI_API_KEY is not configured in .env. "
+                "Get your key from: https://aistudio.google.com/app/apikey"
             )
-        _client = Groq(api_key=settings.GROQ_API_KEY)
-    return _client
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        _model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=(
+                "You are a fact-checking assistant specializing in Filipino disinformation. "
+                "You extract the single most verifiable factual claim from any text. "
+                "You always respond with valid JSON only — no markdown, no explanation."
+            ),
+            generation_config=types.GenerationConfig(
+                temperature=0.1,
+                response_mime_type="application/json",
+            ),
+        )
+    return _model
 
 
 async def extract_claim(preprocessed: PreprocessedInput) -> ExtractedClaim:
     prompt = _build_extraction_prompt(preprocessed.text, preprocessed.language)
-
-    response = _groq().chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a fact-checking assistant specializing in Filipino disinformation. "
-                    "You extract the single most verifiable factual claim from any text. "
-                    "You always respond with valid JSON only — no markdown, no explanation."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.1,
-        max_tokens=512
-    )
-
-    raw = response.choices[0].message.content.strip()
+    response = _gemini().generate_content(prompt)
+    raw = response.text.strip()
 
     if raw.startswith("```"):
         raw = raw.split("```")[1]

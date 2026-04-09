@@ -2,20 +2,14 @@ let verifAI_panel = null
 let verifAI_popup = null
 let selectedClaim = ''
 let _lastVerdictData = null
-let _panelReady = false
 
 const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
-const MIN_CHAR_COUNT = 20
 
 document.addEventListener('mouseup', () => {
-    const selection = window.getSelection()
-    const text = selection ? selection.toString().trim() : ''
-
-    if (text.length >= MIN_CHAR_COUNT) {
-        selectedClaim = text
+    const selected_text = window.getSelection().toString().trim()
+    if (selected_text.length > 100) {
+        selectedClaim = selected_text
         show_popup()
-    } else {
-        if (verifAI_popup) hide_popup()
     }
 })
 
@@ -128,7 +122,7 @@ function injectUnderlineStyles() {
             background: rgba(59,130,246,0.25) !important;
         }
     `
-    ;(document.head || document.documentElement).appendChild(style)
+        ; (document.head || document.documentElement).appendChild(style)
 }
 
 function removeUnderlineStyles() {
@@ -181,54 +175,23 @@ async function request_verification(text) {
 
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "SHOW_LOADING") {
-        show_verdict_panel(null, null, true)
+        show_verdict_panel(null)
     }
     if (message.type === "SHOW_VERDICT") {
         _lastVerdictData = message.verdict
-        const existing = document.getElementById('verifai-root')
-        if (existing && _panelReady) {
-            update_panel_ui(existing.shadowRoot, message.verdict)
-        } else if (existing && !_panelReady) {
-            _pendingVerdict = { data: message.verdict, errorMsg: null }
-        } else {
-            show_verdict_panel(message.verdict)
-        }
+        show_verdict_panel(message.verdict)
     }
     if (message.type === "SHOW_ERROR") {
-        const existing = document.getElementById('verifai-root')
-        if (existing && _panelReady) {
-            update_panel_ui(existing.shadowRoot, null, message.message)
-        } else if (existing && !_panelReady) {
-            _pendingVerdict = { data: null, errorMsg: message.message }
-        } else {
-            show_verdict_panel(null, message.message)
-        }
+        show_verdict_panel(null, message.message)
     }
 })
 
-let _pendingVerdict = null
-
-// isLoading=true: panel opens immediately and waits for SHOW_VERDICT; does NOT overwrite pending slot
-function show_verdict_panel(data, errorMsg, isLoading = false) {
-    if (document.getElementById('verifai-root') && _panelReady) {
+function show_verdict_panel(data, errorMsg) {
+    if (document.getElementById('verifai-root')) {
         const existing = document.getElementById('verifai-root')
-        if (isLoading) {
-            update_panel_ui(existing.shadowRoot, null, null, true)
-        } else {
-            update_panel_ui(existing.shadowRoot, data, errorMsg)
-        }
+        update_panel_ui(existing.shadowRoot, data, errorMsg)
         return
     }
-
-    if (document.getElementById('verifai-root') && !_panelReady) {
-        if (!isLoading && (data !== null || errorMsg)) {
-            _pendingVerdict = { data, errorMsg }
-        }
-        return
-    }
-
-    _panelReady = false
-    _pendingVerdict = (!isLoading && (data !== null || errorMsg)) ? { data, errorMsg } : null
 
     const host = document.createElement('div')
     host.id = 'verifai-root'
@@ -254,7 +217,6 @@ function show_verdict_panel(data, errorMsg, isLoading = false) {
             closeBtn.onclick = () => {
                 const el = document.getElementById('verifai-root')
                 if (el) el.remove()
-                _panelReady = false
             }
         }
 
@@ -275,19 +237,9 @@ function show_verdict_panel(data, errorMsg, isLoading = false) {
         window.addEventListener('verifai:closepanel', () => {
             const el = document.getElementById('verifai-root')
             if (el) el.remove()
-            _panelReady = false
         })
 
-        _panelReady = true
-
-        if (_pendingVerdict) {
-            update_panel_ui(shadow, _pendingVerdict.data, _pendingVerdict.errorMsg)
-            _pendingVerdict = null
-        } else if (isLoading) {
-            update_panel_ui(shadow, null, null, true)
-        } else if (data !== null) {
-            update_panel_ui(shadow, data, errorMsg)
-        }
+        update_panel_ui(shadow, data, errorMsg)
     })
 }
 
@@ -385,19 +337,7 @@ function _showDetailView(shadow, entry) {
     }
 }
 
-function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
-    const loadingEl = shadow.getElementById('loading-state')
-    const contentEl = shadow.getElementById('content-state')
-
-    if (isLoading) {
-        if (loadingEl) loadingEl.classList.remove('hidden')
-        if (contentEl) contentEl.classList.add('hidden')
-        return
-    }
-
-    if (loadingEl) loadingEl.classList.add('hidden')
-    if (contentEl) contentEl.classList.remove('hidden')
-
+function update_panel_ui(shadow, data, errorMsg) {
     if (errorMsg) {
         const el = shadow.getElementById('verif-explanation-en')
         if (el) el.innerText = errorMsg
@@ -409,9 +349,9 @@ function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
     const confidence = Math.round((data.confidence ?? 0) * 100)
     const sourceUrl = (data.sources && data.sources[0]) || data.source_surface || 'VerifAI Cache'
 
-    const verdict_el = shadow.getElementById('verif-verdict')
-    const confidence_el = shadow.getElementById('verif-confidence')
-    const source_el = shadow.getElementById('verif-source')
+    const verdict_el     = shadow.getElementById('verif-verdict')
+    const confidence_el  = shadow.getElementById('verif-confidence')
+    const source_el      = shadow.getElementById('verif-source')
     const explanation_en = shadow.getElementById('verif-explanation-en')
     const explanation_tl = shadow.getElementById('verif-explanation-tl')
 
@@ -424,9 +364,10 @@ function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
     if (explanation_en) explanation_en.innerText = data.explanation_en || ''
     if (explanation_tl) explanation_tl.innerText = data.explanation_tl || ''
 
-    const traceSection = shadow.getElementById('verif-trace-section')
-    const traceStepsEl = shadow.getElementById('verif-trace-steps')
-    const traceSummary = shadow.getElementById('verif-trace-summary')
+    // ── verdict trace ──────────────────────────────────────────────────────────
+    const traceSection  = shadow.getElementById('verif-trace-section')
+    const traceStepsEl  = shadow.getElementById('verif-trace-steps')
+    const traceSummary  = shadow.getElementById('verif-trace-summary')
 
     if (traceSection && data.trace && data.trace.steps && data.trace.steps.length > 0) {
         const weightClass = { high: 'weight-high', medium: 'weight-medium', low: 'weight-low' }
@@ -448,8 +389,9 @@ function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
         traceSection.style.display = 'none'
     }
 
+    // ── source credibility ─────────────────────────────────────────────────────
     const credSection = shadow.getElementById('verif-cred-section')
-    const credList = shadow.getElementById('verif-cred-list')
+    const credList    = shadow.getElementById('verif-cred-list')
 
     if (credSection && data.source_credibility && data.source_credibility.length > 0) {
         const scoreColor = (score) => {

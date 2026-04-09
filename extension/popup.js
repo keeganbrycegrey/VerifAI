@@ -1,5 +1,3 @@
-const DASHBOARD_URL = "https://verifai-rosy.vercel.app/";
-
 function updateConfidenceBar(percentage) {
   const bar = document.getElementById('confidence-bar')
   const percentEl = document.getElementById('confidence-percent')
@@ -18,9 +16,11 @@ async function loadLastVerdict() {
   try {
     const { history = [] } = await chrome.storage.local.get('history')
     if (history.length === 0) {
-      document.getElementById('verif-verdict').innerText = 'Ready'
-      document.getElementById('verif-explanation-en').innerHTML = 'Ready to fact-check. Highlight text or right-click an image.'
-      document.getElementById('verif-explanation-tl').innerHTML = 'Handa nang mag-verify. I-highlight ang text o i-right-click ang larawan.'
+      document.getElementById('verif-verdict').innerText = 'No recent checks'
+      document.getElementById('verif-confidence').innerText = '—'
+      document.getElementById('verif-source').innerText = '—'
+      document.getElementById('verif-explanation-en').innerText = 'Highlight text or right-click an image on any webpage to check it.'
+      document.getElementById('verif-explanation-tl').innerText = 'I-highlight ang text o right-click ang larawan para mag-fact-check.'
       updateConfidenceBar(0)
       return
     }
@@ -28,13 +28,14 @@ async function loadLastVerdict() {
     const last = history[0]
     const confidencePercent = Math.round((last.confidence || 0) * 100)
     const verdictEl = document.getElementById('verif-verdict')
+    const verdict = (last.rating || 'UNVERIFIED').toUpperCase()
 
-    verdictEl.innerText = (last.rating || 'UNVERIFIED').toUpperCase()
+    verdictEl.innerText = verdict
     updateVerdictColor(verdictEl, last.rating)
-    document.getElementById('verif-confidence').innerHTML = `${confidencePercent}%`
-    document.getElementById('verif-source').innerHTML = last.source || 'VerifAI Cache'
-    document.getElementById('verif-explanation-en').innerHTML = last.explanation_en || '—'
-    document.getElementById('verif-explanation-tl').innerHTML = last.explanation_tl || '—'
+    document.getElementById('verif-confidence').innerText = confidencePercent + '%'
+    document.getElementById('verif-source').innerText = last.source || 'VerifAI Cache'
+    document.getElementById('verif-explanation-en').innerText = last.explanation_en || '—'
+    document.getElementById('verif-explanation-tl').innerText = last.explanation_tl || '—'
     updateConfidenceBar(confidencePercent)
   } catch (e) {
     console.error('Failed to load verdict:', e)
@@ -42,11 +43,7 @@ async function loadLastVerdict() {
 }
 
 document.getElementById('verif-close').addEventListener('click', () => {
-  window.close()
-})
-
-document.getElementById('btn-dashboard').addEventListener('click', () => {
-  window.open(DASHBOARD_URL, '_blank');
-})
+  window.close();
+});
 
 loadLastVerdict()
