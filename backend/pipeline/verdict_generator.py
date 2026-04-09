@@ -15,7 +15,6 @@ from models import (
 from config import get_settings
 
 settings = get_settings()
-
 VALID_RATINGS = {"true", "false", "misleading", "unverified", "needs_context"}
 
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "bias_registry.json"
@@ -28,20 +27,11 @@ def _groq():
     global _groq_client
     if _groq_client is None:
         if not settings.GROQ_API_KEY:
-            raise ValueError(
-                "GROQ_API_KEY is not configured in .env. "
-                "Get your key from: https://console.groq.com/keys"
-            )
+            raise ValueError("GROQ_API_KEY is not configured in .env. Get your key from: https://console.groq.com/keys")
         _groq_client = Groq(api_key=settings.GROQ_API_KEY)
     return _groq_client
 
-_TRUTH_VALUE = {
-    "true": 1.0,
-    "false": 0.0,
-    "misleading": 0.6,
-    "needs_context": 0.5,
-    "unverified": 0.5,
-}
+_TRUTH_VALUE = {"true": 1.0, "false": 0.0, "misleading": 0.6, "needs_context": 0.5, "unverified": 0.5}
 
 def _aggregate_fact_check_verdicts(fact_checks: FactCheckResults) -> Tuple[float, str]:
     if not fact_checks.found or not fact_checks.matches:
@@ -52,7 +42,6 @@ def _aggregate_fact_check_verdicts(fact_checks: FactCheckResults) -> Tuple[float
         score = _TRUTH_VALUE.get(fc.verdict.lower(), 0.5)
         scores.append(score)
         rating_counts[fc.verdict.lower()] += 1
-
     avg_score = sum(scores) / len(scores)
     rating = max(rating_counts.items(), key=lambda x: x[1])[0] if rating_counts else "unverified"
     return avg_score, rating
@@ -63,50 +52,32 @@ def _cluster_sources_by_content(sources: List[str]) -> List[List[str]]:
         clusters[s].append(s)
     return list(clusters.values())
 
-def _compute_cross_reference_score(
-    coverage: CoverageReport,
-) -> float:
-    outlet_info = {
-        o.outlet: _REGISTRY.get(o.outlet, {
-            "credibility_score": 0.5,
-            "bias": "center",
-        })
-        for o in coverage.covering
-    }
-
+def _compute_cross_reference_score(coverage: CoverageReport) -> float:
+    outlet_info = {o.outlet: _REGISTRY.get(o.outlet, {"credibility_score": 0.5, "bias": "center"}) for o in coverage.covering}
     outlets = [o.outlet for o in coverage.covering]
     clusters = _cluster_sources_by_content(outlets)
-
     weighted_scores = []
     weights = []
-
     for cluster in clusters:
         cred_scores = [outlet_info.get(outlet, {}).get("credibility_score", 0.5) for outlet in cluster]
         avg_cred = sum(cred_scores) / max(len(cred_scores), 1)
         truth_score = 0.5
         echo_weight = 1 / len(cluster)
-
         weighted_scores.append(truth_score * avg_cred * echo_weight)
         weights.append(avg_cred * echo_weight)
-
     if not weights:
         return 0.5
-
     cross_ref_score = sum(weighted_scores) / sum(weights)
     return cross_ref_score
 
 def _calculate_polarization_penalty(bias_spread: dict) -> float:
     left = bias_spread.get("left", 0)
-    center = bias_spread.get("center", 0)
     right = bias_spread.get("right", 0)
-    total = left + center + right
+    total = left + right
     if total == 0:
         return 0.0
-
     left_norm = left / total
-    center_norm = center / total
     right_norm = right / total
-
     polarization = max(left_norm, right_norm)
     penalty = polarization * 0.3
     return penalty
@@ -123,14 +94,7 @@ def _map_score_to_rating(score: float) -> str:
     else:
         return "false"
 
-async def generate_verdict(
-    claim: ExtractedClaim,
-    fact_checks: FactCheckResults,
-    coverage: CoverageReport,
-    input_type: str,
-    source_surface: str,
-) -> Verdict:
-
+async def generate_verdict(claim: ExtractedClaim, fact_checks: FactCheckResults, coverage: CoverageReport, input_type: str, source_surface: str) -> Verdict:
     fc_agg = _aggregate_fact_check_verdicts(fact_checks)
     if fc_agg is not None:
         verdict_score, rating = fc_agg
@@ -141,47 +105,27 @@ async def generate_verdict(
         adjusted_score = max(0.0, cross_ref_score - polarization_penalty)
         rating = _map_score_to_rating(adjusted_score)
         confidence = min(0.85, max(0.1, adjusted_score))
-
     prompt = _build_verdict_prompt(claim, fact_checks, coverage)
-
-    response = _groq().chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Ikaw ay isang dalubhasang fact-checker ng mga balita at impormasyon sa Pilipinas. "
-                    "Sinusuri mo ang mga claim gamit ang mga ebidensya at nagbibigay ng malinaw na hatol. "
-                    "Lagi kang sumasagot ng valid JSON lamang — walang markdown, walang paliwanag sa labas ng JSON.\n\n"
-                    "You are an expert fact-checker for Philippine news and information. "
-                    "You analyze claims using evidence and give clear verdicts. "
-                    "Always respond with valid JSON only."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-        max_tokens=1024
-    )
-
-    raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        response = _groq().chat.completions.create(
+            model=settings.GROQ_MODEL,
+            messages=[{"role": "system", "content": "You are a fact-check explanation generator."}, {"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=1024
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        parsed = json.loads(raw.strip())
+    except Exception:
         parsed = {}
-
     explanation_en = parsed.get("explanation_en", "placeholder: bading si dion")
     explanation_tl = parsed.get("explanation_tl", "placeholder: bading si dion")
     reasoning_summary = parsed.get("reasoning_summary", "placeholder: bading si dion")
     trace_summary = parsed.get("trace_summary", "placeholder: bading si dion")
     sources = parsed.get("sources", ["placeholder: bading si dion"])
-
     return Verdict(
         claim=claim.core_claim,
         rating=rating,
@@ -200,48 +144,21 @@ async def generate_verdict(
 
 def _build_trace(parsed: dict, fact_checks: FactCheckResults, coverage: CoverageReport) -> VerdictTrace:
     steps = []
-
     if fact_checks.found:
         fc_sources = list({m.source for m in fact_checks.matches[:3]})
-        steps.append(VerdictStep(
-            step="Fact Check Lookup",
-            finding=f"Found {len(fact_checks.matches)} existing fact-check(s) from {', '.join(fc_sources)}",
-            weight="high", icon="🔍",
-        ))
+        steps.append(VerdictStep(step="Fact Check Lookup", finding=f"Found {len(fact_checks.matches)} existing fact-check(s) from {', '.join(fc_sources)}", weight="high", icon="🔍"))
     else:
-        steps.append(VerdictStep(
-            step="Fact Check Lookup",
-            finding="No existing fact-checks found in IFCN-certified sources",
-            weight="medium", icon="🔍",
-        ))
-
+        steps.append(VerdictStep(step="Fact Check Lookup", finding="No existing fact-checks found in IFCN-certified sources", weight="medium", icon="🔍"))
     covering_count = len(coverage.covering)
     bias = coverage.bias_spread
     if covering_count > 0:
         spread = [f"{v} {k}" for k, v in bias.items() if v > 0]
-        steps.append(VerdictStep(
-            step="Coverage Analysis",
-            finding=f"{covering_count} outlet(s) found - bias spread: {', '.join(spread) or 'none detected'}",
-            weight="medium", icon="📰",
-        ))
+        steps.append(VerdictStep(step="Coverage Analysis", finding=f"{covering_count} outlet(s) found - bias spread: {', '.join(spread) or 'none detected'}", weight="medium", icon="📰"))
     else:
-        steps.append(VerdictStep(
-            step="Coverage Analysis",
-            finding="No Philippine news outlets found covering this story",
-            weight="low", icon="📰",
-        ))
-
-    ai_finding = reasoning_summary = parsed.get("reasoning_summary", "") or (parsed.get("explanation_en", "") or "")[:120]
-    steps.append(VerdictStep(
-        step="AI Reasoning",
-        finding=ai_finding or "Verdict derived from available evidence",
-        weight="high", icon="🤖",
-    ))
-
-    summary = parsed.get(
-        "trace_summary",
-        f"Verdict reached based on {len(fact_checks.matches)} fact-check(s) and {covering_count} outlet(s)."
-    )
+        steps.append(VerdictStep(step="Coverage Analysis", finding="No Philippine news outlets found covering this story", weight="low", icon="📰"))
+    ai_finding = parsed.get("reasoning_summary", "") or (parsed.get("explanation_en", "") or "")[:120]
+    steps.append(VerdictStep(step="AI Reasoning", finding=ai_finding or "Verdict derived from available evidence", weight="high", icon="🤖"))
+    summary = parsed.get("trace_summary", f"Verdict reached based on {len(fact_checks.matches)} fact-check(s) and {covering_count} outlet(s).")
     return VerdictTrace(steps=steps, summary=summary)
 
 def _build_source_credibility(coverage: CoverageReport) -> List[SourceCredibility]:
@@ -260,27 +177,13 @@ def _build_source_credibility(coverage: CoverageReport) -> List[SourceCredibilit
     result.sort(key=lambda x: x.score, reverse=True)
     return result
 
-def _build_verdict_prompt(
-    claim: ExtractedClaim,
-    fact_checks: FactCheckResults,
-    coverage: CoverageReport,
-) -> str:
+def _build_verdict_prompt(claim: ExtractedClaim, fact_checks: FactCheckResults, coverage: CoverageReport) -> str:
     fc_text = "None found."
     if fact_checks.found and fact_checks.matches:
-        fc_text = "\n".join(
-            f"- [{m.source}] Verdict: {m.verdict} | Claim: {m.claim_reviewed} | URL: {m.url}"
-            for m in fact_checks.matches[:5]
-        )
-
+        fc_text = "\n".join(f"- [{m.source}] Verdict: {m.verdict} | Claim: {m.claim_reviewed} | URL: {m.url}" for m in fact_checks.matches[:5])
     covering_names = [o.outlet for o in coverage.covering]
     bias = coverage.bias_spread
-
     return f"""Evaluate the following claim and return a fact-check verdict explanation.
-
-CLAIM TO EVALUATE:
-"{claim.core_claim}"
-
-NAMED ENTITIES: {', '.join(claim.entities) or 'None identified'}
 
 EXISTING FACT-CHECKS FOUND:
 {fc_text}
