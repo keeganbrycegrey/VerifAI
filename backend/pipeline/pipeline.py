@@ -30,12 +30,8 @@ async def run_pipeline(request: CheckRequest) -> Verdict:
     # query fact-checkers
     fact_checks: FactCheckResults = await lookup(claim)
 
-    # skip coverage if strong fact-check match exists
-    if fact_checks.high_confidence:
-        print(f"short-circuit: strong fact-check match found")
-        coverage = _empty_coverage()
-    else:
-        coverage: CoverageReport = await analyze_coverage(claim)
+    # always run coverage analysis — short-circuiting leads to incomplete/inaccurate results
+    coverage: CoverageReport = await analyze_coverage(claim)
 
     # generate bilingual verdict
     verdict: Verdict = await generate_verdict(
@@ -50,13 +46,3 @@ async def run_pipeline(request: CheckRequest) -> Verdict:
     await save_verdict(verdict)
 
     return verdict
-
-
-def _empty_coverage() -> CoverageReport:
-    # placeholder when short-circuit skips coverage
-    return CoverageReport(
-        covering=[],
-        not_covering=[],
-        bias_spread={"left": 0, "center": 0, "right": 0, "state": 0},
-        total_articles_found=0,
-    )
