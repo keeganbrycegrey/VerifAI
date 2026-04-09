@@ -1,5 +1,5 @@
 # all api keys and env vars live here
-# wag ilalagay ang keys KAHIT SAAN, railway lang
+# wag ilalagay ang keys KAHIT SAAN, .env lang dapat, at dapat naka .gitignore
 # copy .env.example to .env
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # groq
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
     # google fact check
     GOOGLE_FACTCHECK_API_KEY: str = ""
