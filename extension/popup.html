@@ -1,66 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VerifAI Popup</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="verifai-panel">
-    <div class="verifai-header">
-      <div class="header-side">
-        <button id="btn-dashboard" class="header-icon-btn" title="Open Dashboard">⊞</button>
-      </div>
-      
-      <div class="header-center">
-        <img class="verifai-icon" src="icons/icon48.png" alt="VerifAI">
-        <div class="header-text">
-          <div class="verifai-title">VERIFAI</div>
-          <div class="verifai-subtitle">Fact Checker PH</div>
-        </div>
-      </div>
+const DASHBOARD_URL = "https://verifai-rosy.vercel.app/";
 
-      <div class="header-side">
-        <button id="verif-close" class="verifai-close">×</button>
-      </div>
-    </div>
+function updateConfidenceBar(percentage) {
+  const bar = document.getElementById('confidence-bar')
+  const percentEl = document.getElementById('confidence-percent')
+  if (bar && percentEl) {
+    bar.style.width = `${percentage}%`
+    percentEl.innerText = `${percentage}%`
+  }
+}
 
-    <div class="verifai-body">
-      <div class="verdict-card">
-        <div class="verdict-row">
-          <span class="verifai-label">Verdict</span>
-          <span id="verif-verdict" class="verifai-value">—</span>
-        </div>
-        <div class="verdict-row">
-          <span class="verifai-label">Confidence</span>
-          <span id="verif-confidence" class="verifai-value">—</span>
-        </div>
-        <div class="verdict-row">
-          <span class="verifai-label">Source</span>
-          <span id="verif-source" class="verifai-value">—</span>
-        </div>
-      </div>
+function updateVerdictColor(element, verdict) {
+  const verdictLower = (verdict || 'unverified').toLowerCase().replace(/\s+/g, '_')
+  element.className = `verifai-value status-${verdictLower}`
+}
 
-      <div class="confidence-section">
-        <label class="confidence-label">Confidence Level</label>
-        <div class="confidence-bar-container">
-          <div id="confidence-bar" class="confidence-bar" style="width: 0%"></div>
-        </div>
-        <div id="confidence-percent" class="confidence-percentage">0%</div>
-      </div>
+async function loadLastVerdict() {
+  try {
+    const { history = [] } = await chrome.storage.local.get('history')
+    if (history.length === 0) {
+      document.getElementById('verif-verdict').innerText = 'Ready'
+      document.getElementById('verif-explanation-en').innerHTML = 'Ready to fact-check. Highlight text or right-click an image.'
+      document.getElementById('verif-explanation-tl').innerHTML = 'Handa nang mag-verify. I-highlight ang text o i-right-click ang larawan.'
+      updateConfidenceBar(0)
+      return
+    }
 
-      <div class="explanation-section">
-        <label class="verifai-explanation-label">Explanation</label>
-        <div id="verif-explanation-en" class="verifai-explanation-value">—</div>
-      </div>
+    const last = history[0]
+    const confidencePercent = Math.round((last.confidence || 0) * 100)
+    const verdictEl = document.getElementById('verif-verdict')
 
-      <div class="explanation-section">
-        <label class="verifai-explanation-label">Paliwanag</label>
-        <div id="verif-explanation-tl" class="verifai-explanation-value">—</div>
-      </div>
-    </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
-</html>
+    verdictEl.innerText = (last.rating || 'UNVERIFIED').toUpperCase()
+    updateVerdictColor(verdictEl, last.rating)
+    document.getElementById('verif-confidence').innerHTML = `${confidencePercent}%`
+    document.getElementById('verif-source').innerHTML = last.source || 'VerifAI Cache'
+    document.getElementById('verif-explanation-en').innerHTML = last.explanation_en || '—'
+    document.getElementById('verif-explanation-tl').innerHTML = last.explanation_tl || '—'
+    updateConfidenceBar(confidencePercent)
+  } catch (e) {
+    console.error('Failed to load verdict:', e)
+  }
+}
+
+document.getElementById('verif-close').addEventListener('click', () => {
+  window.close()
+})
+
+document.getElementById('btn-dashboard').addEventListener('click', () => {
+  window.open(DASHBOARD_URL, '_blank');
+})
+
+loadLastVerdict()
