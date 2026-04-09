@@ -24,7 +24,6 @@ with open(_REGISTRY_PATH) as f:
 
 _groq_client = None
 
-
 def _groq():
     global _groq_client
     if _groq_client is None:
@@ -36,7 +35,6 @@ def _groq():
         _groq_client = Groq(api_key=settings.GROQ_API_KEY)
     return _groq_client
 
-
 _TRUTH_VALUE = {
     "true": 1.0,
     "false": 0.0,
@@ -45,11 +43,9 @@ _TRUTH_VALUE = {
     "unverified": 0.5,
 }
 
-
 def _aggregate_fact_check_verdicts(fact_checks: FactCheckResults) -> Tuple[float, str]:
     if not fact_checks.found or not fact_checks.matches:
         return None
-
     scores = []
     rating_counts = defaultdict(int)
     for fc in fact_checks.matches:
@@ -61,13 +57,11 @@ def _aggregate_fact_check_verdicts(fact_checks: FactCheckResults) -> Tuple[float
     rating = max(rating_counts.items(), key=lambda x: x[1])[0] if rating_counts else "unverified"
     return avg_score, rating
 
-
 def _cluster_sources_by_content(sources: List[str]) -> List[List[str]]:
     clusters = defaultdict(list)
     for s in sources:
         clusters[s].append(s)
     return list(clusters.values())
-
 
 def _compute_cross_reference_score(
     coverage: CoverageReport,
@@ -101,7 +95,6 @@ def _compute_cross_reference_score(
     cross_ref_score = sum(weighted_scores) / sum(weights)
     return cross_ref_score
 
-
 def _calculate_polarization_penalty(bias_spread: dict) -> float:
     left = bias_spread.get("left", 0)
     center = bias_spread.get("center", 0)
@@ -118,7 +111,6 @@ def _calculate_polarization_penalty(bias_spread: dict) -> float:
     penalty = polarization * 0.3
     return penalty
 
-
 def _map_score_to_rating(score: float) -> str:
     if score >= 0.85:
         return "true"
@@ -130,7 +122,6 @@ def _map_score_to_rating(score: float) -> str:
         return "unverified"
     else:
         return "false"
-
 
 async def generate_verdict(
     claim: ExtractedClaim,
@@ -207,7 +198,6 @@ async def generate_verdict(
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
-
 def _build_trace(parsed: dict, fact_checks: FactCheckResults, coverage: CoverageReport) -> VerdictTrace:
     steps = []
 
@@ -254,7 +244,6 @@ def _build_trace(parsed: dict, fact_checks: FactCheckResults, coverage: Coverage
     )
     return VerdictTrace(steps=steps, summary=summary)
 
-
 def _build_source_credibility(coverage: CoverageReport) -> List[SourceCredibility]:
     result = []
     for outlet_cov in coverage.covering:
@@ -270,7 +259,6 @@ def _build_source_credibility(coverage: CoverageReport) -> List[SourceCredibilit
         ))
     result.sort(key=lambda x: x.score, reverse=True)
     return result
-
 
 def _build_verdict_prompt(
     claim: ExtractedClaim,
