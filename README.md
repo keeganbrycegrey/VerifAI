@@ -38,19 +38,19 @@ All three surfaces share one backend. A claim verified through the extension is 
 
 Every submission passes through a sequential, optimized pipeline regardless of which surface it enters from.
 
-**Preprocessing** normalizes all input types to plain text. Images are processed through Gemini 2.0 Flash - Pillow (A vision-language model served via Gemini), which extracts all visible text from screenshots, memes, and forwarded images. URLs are fetched and stripped of navigation boilerplate, isolating the article body. Filipino language detection runs on the normalized text using a heuristic model calibrated against localized specific function words.
+**Preprocessing** normalizes all input types to plain text. Images are processed through Llama 4 Scout (a vision-language model served via Groq), which extracts all visible text from screenshots, memes, and forwarded images. URLs are fetched and stripped of navigation boilerplate, isolating the article body. Filipino language detection runs on the normalized text using a heuristic model calibrated against localized specific function words.
 
-**Claim Extraction** uses Gemini 2.0 Flash to isolate a single verifiable factual assertion from the input. The model is instructed to discard opinions, rhetorical questions, and non-falsifiable statements. Named entities, people, organizations, places, and dates are extracted simultaneously and used to broaden the subsequent fact-check search if initial results are sparse.
+**Claim Extraction** uses Llama 3.3 70B to isolate a single verifiable factual assertion from the input. The model is instructed to discard opinions, rhetorical questions, and non-falsifiable statements. Named entities, people, organizations, places, and dates are extracted simultaneously and used to broaden the subsequent fact-check search if initial results are sparse.
 
 **Cache Lookup** queries Supabase before any external API call is made. If a prior verdict exists for the same claim, it is returned immediately with the full reasoning trace intact. This is a deliberate efficiency decision: the same false claim often circulates in waves in the Philippine context, and there is no value in re-running the full pipeline on a claim the system has already evaluated.
 
-**Fact-Check Lookup** submits the claim to the Google Fact Check Tools API, which aggregates results from IFCN-certified Philippine fact-checkers(Vera Files, TSEK.PH, and AFP Fact Check). If a high-confidence match exists (a definitive verdict from a certified source), the system short-circuits: coverage analysis is skipped, and the pipeline proceeds directly to verdict generation. This reduces latency and API consumption for cases where an authoritative answer already exists.
+**Fact-Check Lookup** submits the claim to the Google Fact Check Tools API, which aggregates results from IFCN-certified Philippine fact-checkers (Vera Files, TSEK.PH, and AFP Fact Check). If a high-confidence match exists (a definitive verdict from a certified source), the system short-circuits: coverage analysis is skipped, and the pipeline proceeds directly to verdict generation. This reduces latency and API consumption for cases where an authoritative answer already exists.
 
-**Coverage Analysis** - run only when no high-confidence fact-check is found and queries three sources concurrently: the GDELT Document API (filtered to Philippine-domain and Tagalog-language sources), NewsAPI (restricted to seven major Philippine outlet domains), and a custom RSS fetcher pulling from seven active Philippine feeds. Each article is matched against the bias registry by domain or outlet name, producing a report of covering outlets, not-covering outlets, bias spread by political leaning, and total article count.
+**Coverage Analysis** is run only when no high-confidence fact-check is found, and queries three sources concurrently: the GDELT Document API (filtered to Philippine-domain and Tagalog-language sources), NewsAPI (restricted to seven major Philippine outlet domains), and a custom RSS fetcher pulling from seven active Philippine feeds. Each article is matched against the bias registry by domain or outlet name, producing a report of covering outlets, not-covering outlets, bias spread by political leaning, and total article count.
 
-**Verdict Generation** synthesizes all evidence through Gemini 2.0 Flash. The model receives fact-check results, coverage spread, and bias distribution and returns a structured bilingual verdict with a confidence score (0.0–1.0), citations, a one-sentence reasoning summary, and a trace summary. IFCN-certified fact-checks are weighted heavily; single-perspective coverage is flagged. Invalid ratings are normalized to `unverified`. Confidence values are clamped to the valid range.
+**Verdict Generation** synthesizes all evidence through Llama 3.3 70B. The model receives fact-check results, coverage spread, and bias distribution and returns a structured bilingual verdict with a confidence score (0.0–1.0), citations, a one-sentence reasoning summary, and a trace summary. IFCN-certified fact-checks are weighted heavily; single-perspective coverage is flagged. Invalid ratings are normalized to `unverified`. Confidence values are clamped to the valid range.
 
-**Reasoning Trace** is constructed from the actual pipeline data and not from the language model,  as a three-step chain: what the fact-check lookup found and its weight on the verdict, what the coverage analysis revealed and how broad the spread was, and how the AI synthesized both into its conclusion. This trace is a first-class output, displayed to the user alongside the verdict.
+**Reasoning Trace** is constructed from the actual pipeline data and not from the language model, as a three-step chain: what the fact-check lookup found and its weight on the verdict, what the coverage analysis revealed and how broad the spread was, and how the AI synthesized both into its conclusion. This trace is a first-class output, displayed to the user alongside the verdict.
 
 **Source Credibility** pulls a rating for each covering outlet from the bias registry: a 0–1 score, a classification (Highly Reliable, Generally Reliable, Needs Context, State Media), and a plain-language explanation. Users see not just who covered the story, but how much epistemic weight to assign each source.
 
@@ -68,10 +68,10 @@ FastAPI Backend (Railway)
     │
     |--- Preprocessor
     │       |--- Text: normalize and clean
-    │       |--- Image: Gemini 2.0 Flash - Pillow OCR via Gemini
+    │       |--- Image: Llama 4 Scout OCR via Groq
     │       L--- URL: httpx fetch + BeautifulSoup4 extraction
     │
-    |--- Claim Extractor - Gemini 2.0 Flash via Gemini
+    |--- Claim Extractor - Llama 3.3 70B via Groq
     │
     |--- Google Fact Check Tools API
     │       L--- high_confidence=True ──> skip to verdict generation
@@ -81,7 +81,7 @@ FastAPI Backend (Railway)
     │       |--- NewsAPI (7 PH outlet domains)
     │       └── RSS Fetcher × 7 feeds + bias registry matching
     │
-    |--- Verdict Generator - Gemini 2.0 Flash via Gemini
+    |--- Verdict Generator - Llama 3.3 70B via Groq
     │       |--- Bilingual verdict (EN + TL)
     │       |--- VerdictTrace - 3-step reasoning chain
     │       L--- SourceCredibility - per covering outlet
@@ -103,7 +103,7 @@ FastAPI Backend (Railway)
 | Uvicorn | 0.30.6 | ASGI server |
 | Pydantic | 2.7.4 | Data validation and serialization |
 | pydantic-settings | 2.3.4 | Environment variable management |
-| Gemini | 0.9.0 | LLaMA 3.3 + LLaVA inference |
+| groq | 0.11.0 | Llama 3.3 70B + Llama 4 Scout inference |
 | httpx | 0.27.0 | Async HTTP client |
 | beautifulsoup4 | 4.12.3 | HTML parsing for URL input |
 | lxml | 5.2.2 | XML/HTML parser backend |
@@ -122,8 +122,8 @@ FastAPI Backend (Railway)
 ### AI Models
 | Model | Provider | Role |
 |---|---|---|
-| Gemini 2.0 Flash | Google / Gemini | Claim extraction and verdict generation |
-| Gemini 2.0 Flash - Pillow | Google / Gemini | Image OCR |
+| Llama 3.3 70B Versatile | Meta / Groq | Claim extraction and verdict generation |
+| Llama 4 Scout 17B | Meta / Groq | Image OCR for screenshots and forwarded images |
 | jcblaise/roberta-tagalog-base | Jan Christian Blaise Cruz / HuggingFace | Filipino language processing |
 
 ### Infrastructure
@@ -132,11 +132,12 @@ FastAPI Backend (Railway)
 | Railway | Backend hosting, no sleep on inactivity | Free tier |
 | Vercel | Dashboard hosting | Free tier |
 | Supabase | PostgreSQL database, caching, RLS | Free tier |
-| Gemini API | Flash + Pillow inference | Free tier |
+| Groq API | Llama 3.3 70B + Llama 4 Scout inference | Free tier |
 | Google Fact Check API | IFCN fact-checker aggregation | Free (Public Data) |
 | GDELT API | Philippine news coverage | Public, no key |
 
-The entire system runs on free-tier infrastructure. 
+The entire system runs on free-tier infrastructure.
+
 ---
 
 ## Philippine Media Coverage
@@ -193,8 +194,14 @@ All fact-check data is sourced from **IFCN-certified organizations** through the
 
 ### AI Models & Inference
 
-**Google Gemini 2.0 Flash**
-Team, G., Georgiev, P., Lei, V. I., Burnell, R., Bai, L., Gulati, A., Tanzer, G., Vincent, D., Pan, Z., Wang, S., Mariooryad, S., Ding, Y., Geng, X., Alcober, F., Frostig, R., Omernick, M., Walker, L., Paduraru, C., Sorokin, C., . . .  Vinyals, O. (2024). Gemini 2.0: Unlocking multimodal understanding across millions of tokens of context. ArXiv. https://arxiv.org/abs/2403.05530
+**Meta Llama 3.3 70B**
+Meta AI. (2024). Llama 3 Model Card. https://github.com/meta-llama/llama3/blob/main/MODEL_CARD.md
+
+**Meta Llama 4 Scout 17B**
+Meta AI. (2025). Llama 4 Model Card. https://github.com/meta-llama/llama-models/blob/main/models/llama4/MODEL_CARD.md
+
+**Groq API**
+Groq, Inc. (2024). GroqCloud Documentation. https://console.groq.com/docs/
 
 **jcblaise/roberta-tagalog-base**
 Cruz, J. C. B., & Cheng, C. (2021). Establishing Baselines for Text Classification in Low-Resource Languages. *arXiv preprint arXiv:2005.02068*. https://arxiv.org/abs/2005.02068
@@ -307,8 +314,8 @@ Stencel, M., & Luther, J. (2020). Who fact-checks the fact-checkers? *Poynter In
 
 | Tool | Role in VerifAI |
 |---|---|
-| Gemini 2.0 Flash | Claim extraction and bilingual verdict generation |
-| Gemini 2.0 Flash - Pillow | Image OCR for screenshots and forwarded images |
+| Llama 3.3 70B Versatile (Groq) | Claim extraction and bilingual verdict generation |
+| Llama 4 Scout 17B (Groq) | Image OCR for screenshots and forwarded images |
 | Google Fact Check Tools API | Aggregation of IFCN-certified fact-checker results |
 | HuggingFace / roberta-tagalog-base | Filipino language processing |
 

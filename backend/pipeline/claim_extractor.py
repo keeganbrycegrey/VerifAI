@@ -39,6 +39,7 @@ async def extract_claim(preprocessed: PreprocessedInput) -> ExtractedClaim:
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
+        max_tokens=512
     )
 
     raw = response.choices[0].message.content.strip()

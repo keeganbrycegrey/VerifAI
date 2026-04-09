@@ -61,6 +61,7 @@ async def generate_verdict(
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
+        max_tokens=1024
     )
 
     raw = response.choices[0].message.content.strip()
