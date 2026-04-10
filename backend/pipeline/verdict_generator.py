@@ -119,9 +119,14 @@ def _decide_rating_and_confidence(
     evidence_sources = _build_verdict_sources(fact_checks, coverage)
 
     if fact_checks.found:
-        confidence = min(1.0, 0.65 + 0.25 * fact_score + 0.10 * min(1.0, coverage_score))
-        if fact_rating == "unverified" and coverage_score >= 0.60:
-            fact_rating = "needs_context"
+        if fact_rating == "unverified":
+            confidence = min(0.45, 0.20 + 0.15 * fact_score + 0.10 * min(1.0, coverage_score))
+            if coverage_score >= 0.60:
+                fact_rating = "needs_context"
+        elif fact_rating == "needs_context":
+            confidence = min(0.75, 0.35 + 0.20 * fact_score + 0.10 * min(1.0, coverage_score))
+        else:
+            confidence = min(1.0, 0.65 + 0.25 * fact_score + 0.10 * min(1.0, coverage_score))
         return fact_rating, confidence, evidence_sources, {
             "mode": "fact-check",
             "fact_score": fact_score,
@@ -409,10 +414,10 @@ INSTRUCTIONS:
 5. Provide both an English and a Filipino explanation.
 
 Respond ONLY with this JSON:
-{
+{{
   "explanation_en": "English explanation here.",
   "explanation_tl": "Paliwanag sa Filipino dito.",
   "reasoning_summary": "One sentence: the key reason for this verdict.",
   "trace_summary": "One sentence: summary of the analysis process.",
   "sources": ["url1", "url2"]
-}"""
+}}"""

@@ -7,18 +7,7 @@ let _panelReady = false
 const DASHBOARD_URL = "https://verifai-rosy.vercel.app/"
 const MIN_CHAR_COUNT = 20
 
-document.addEventListener('mouseup', () => {
-    const selection = window.getSelection()
-    const text = selection ? selection.toString().trim() : ''
-
-    if (text.length >= MIN_CHAR_COUNT) {
-        selectedClaim = text
-        show_popup()
-    } else {
-        if (verifAI_popup) hide_popup()
-    }
-})
-
+// Do not auto-show the popup on selection. Use the right-click context menu to verify text.
 function show_popup() {
     if (verifAI_popup) hide_popup()
 
@@ -128,7 +117,7 @@ function injectUnderlineStyles() {
             text-decoration: underline 1d4ed8 dashed 2px;
         }
     `
-    ;(document.head || document.documentElement).appendChild(style)
+        ; (document.head || document.documentElement).appendChild(style)
 }
 
 function removeUnderlineStyles() {
@@ -197,6 +186,7 @@ async function request_verification(text) {
                         }
                     }
                 }
+                show_verdict_panel(response.data)
             } else {
                 show_verdict_panel(response.data)
             }
@@ -270,7 +260,7 @@ function show_verdict_panel(data, errorMsg, isLoading = false) {
 
     const host = document.createElement('div')
     host.id = 'verifai-root'
-    host.style.cssText = 'position:fixed;top:20px;right:20px;width:420px;height:auto;max-height:85vh;z-index:2147483647;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)'
+    host.style.cssText = 'position:fixed;top:20px;right:20px;width:420px;height:100%;max-height:85vh;display:flex;flex-direction:column;z-index:2147483647;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)'
     document.body.appendChild(host)
 
     const shadow = host.attachShadow({ mode: 'open' })
@@ -488,7 +478,8 @@ function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
     if (!data) return
 
     const rating = data.rating ?? 'unverified'
-    const confidence = Math.round((data.confidence ?? 0) * 100)
+    const confidenceFrac = data.confidence ?? 0
+    const confidence = Math.round(confidenceFrac * 100)
     const sourceUrl = (data.sources && data.sources[0]) || data.source_surface || 'VerifAI Cache'
 
     const verdict_el = shadow.querySelector('#verif-verdict')
@@ -561,117 +552,121 @@ function update_panel_ui(shadow, data, errorMsg, isLoading = false) {
     const transparencySection = shadow.querySelector('#verif-transparency-section')
     const transparencyContent = shadow.querySelector('#transparency-content')
 
-    if (transparencySection && data.decision_context) {
-        const ctx = data.decision_context
-        const mode = ctx.mode || 'unknown'
-        const fact_score = ctx.fact_score ?? 0
-        const coverage_score = ctx.coverage_score ?? 0
-        const bias_balance = ctx.bias_balance ?? 0
-        const total_articles = ctx.total_articles ?? 0
+    if (transparencySection) {
+        if (data.decision_context) {
+            const ctx = data.decision_context
+            const mode = ctx.mode || 'unknown'
+            const fact_score = ctx.fact_score ?? 0
+            const coverage_score = ctx.coverage_score ?? 0
+            const bias_balance = ctx.bias_balance ?? 0
+            const total_articles = ctx.total_articles ?? 0
 
-        let html = `
-            <div class="transparency-card">
-                <div class="transparency-header">
-                    Decision Mode
-                    <span class="mode-badge">${mode.replace(/_/g, ' ')}</span>
+            let html = `
+                <div class="transparency-card">
+                    <div class="transparency-header">
+                        Decision Mode
+                        <span class="mode-badge">${mode.replace(/_/g, ' ')}</span>
+                    </div>
                 </div>
-            </div>
-        `
+            `
 
-        if (mode === 'fact-check') {
+            if (mode === 'fact-check') {
+                html += `
+                    <div class="transparency-card">
+                        <div class="transparency-header">Fact-Check Analysis</div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Fact-Check Score</span>
+                            <span class="calculation-value">${(fact_score * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="score-bar-mini">
+                            <div class="score-bar-mini-fill" style="width: ${fact_score * 100}%"></div>
+                        </div>
+                    </div>
+                    <div class="transparency-card">
+                        <div class="transparency-header">Coverage Support</div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Coverage Score</span>
+                            <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Bias Balance</span>
+                            <span class="calculation-value">${(bias_balance * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Articles Found</span>
+                            <span class="calculation-value">${total_articles}</span>
+                        </div>
+                    </div>
+                `
+            } else if (mode === 'coverage_support') {
+                html += `
+                    <div class="transparency-card">
+                        <div class="transparency-header">Coverage-Based Decision</div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Coverage Score</span>
+                            <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Bias Balance</span>
+                            <span class="calculation-value">${(bias_balance * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Articles Found</span>
+                            <span class="calculation-value">${total_articles}</span>
+                        </div>
+                        <div class="score-bar-mini">
+                            <div class="score-bar-mini-fill" style="width: ${coverage_score * 100}%"></div>
+                        </div>
+                    </div>
+                `
+            } else if (mode === 'coverage_weak') {
+                html += `
+                    <div class="transparency-card">
+                        <div class="transparency-header">Limited Coverage</div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Coverage Score</span>
+                            <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calculation-label">Articles Found</span>
+                            <span class="calculation-value">${total_articles}</span>
+                        </div>
+                        <p class="no-data">Insufficient coverage to make a definitive determination</p>
+                    </div>
+                `
+            } else {
+                html += `
+                    <div class="transparency-card">
+                        <p class="no-data">No evidence found to evaluate this claim</p>
+                    </div>
+                `
+            }
+
             html += `
                 <div class="transparency-card">
-                    <div class="transparency-header">Fact-Check Analysis</div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Fact-Check Score</span>
-                        <span class="calculation-value">${(fact_score * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="score-bar-mini">
-                        <div class="score-bar-mini-fill" style="width: ${fact_score * 100}%"></div>
-                    </div>
-                </div>
-                <div class="transparency-card">
-                    <div class="transparency-header">Coverage Support</div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Coverage Score</span>
-                        <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Bias Balance</span>
-                        <span class="calculation-value">${(bias_balance * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Articles Found</span>
-                        <span class="calculation-value">${total_articles}</span>
+                    <div class="transparency-header">Confidence Calculation</div>
+                    <div class="confidence-breakdown">
+                        <div class="breakdown-item">
+                            <span>Base Score</span>
+                            <span class="breakdown-value">${mode === 'fact-check' ? '65%' : mode === 'coverage_support' ? '35%' : mode === 'coverage_weak' ? '20%' : '10%'}</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Evidence Adjustment</span>
+                            <span class="breakdown-value">${(confidence * 100).toFixed(0)}% (final)</span>
+                        </div>
+                        <div class="final-confidence">
+                            Final Confidence: ${(confidence * 100).toFixed(1)}%
+                        </div>
                     </div>
                 </div>
             `
-        } else if (mode === 'coverage_support') {
-            html += `
-                <div class="transparency-card">
-                    <div class="transparency-header">Coverage-Based Decision</div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Coverage Score</span>
-                        <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Bias Balance</span>
-                        <span class="calculation-value">${(bias_balance * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Articles Found</span>
-                        <span class="calculation-value">${total_articles}</span>
-                    </div>
-                    <div class="score-bar-mini">
-                        <div class="score-bar-mini-fill" style="width: ${coverage_score * 100}%"></div>
-                    </div>
-                </div>
-            `
-        } else if (mode === 'coverage_weak') {
-            html += `
-                <div class="transparency-card">
-                    <div class="transparency-header">Limited Coverage</div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Coverage Score</span>
-                        <span class="calculation-value">${(coverage_score * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="calculation-row">
-                        <span class="calculation-label">Articles Found</span>
-                        <span class="calculation-value">${total_articles}</span>
-                    </div>
-                    <p class="no-data">Insufficient coverage to make a definitive determination</p>
-                </div>
-            `
+
+            transparencyContent.innerHTML = html
+            transparencySection.classList.remove('hidden')
         } else {
-            html += `
-                <div class="transparency-card">
-                    <p class="no-data">No evidence found to evaluate this claim</p>
-                </div>
-            `
+            transparencyContent.innerHTML = `<div class="no-data">Transparency details are not available for this verdict yet. The score is based on model reasoning and supporting evidence when available.</div>`
+            transparencySection.classList.remove('hidden')
         }
-
-        html += `
-            <div class="transparency-card">
-                <div class="transparency-header">Confidence Calculation</div>
-                <div class="confidence-breakdown">
-                    <div class="breakdown-item">
-                        <span>Base Score</span>
-                        <span class="breakdown-value">${mode === 'fact-check' ? '65%' : mode === 'coverage_support' ? '35%' : mode === 'coverage_weak' ? '20%' : '10%'}</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span>Evidence Adjustment</span>
-                        <span class="breakdown-value">${(confidence * 100).toFixed(0)}% (final)</span>
-                    </div>
-                    <div class="final-confidence">
-                        Final Confidence: ${(confidence * 100).toFixed(1)}%
-                    </div>
-                </div>
-            </div>
-        `
-
-        transparencyContent.innerHTML = html
-        transparencySection.classList.remove('hidden')
-    } else if (transparencySection) {
-        transparencySection.classList.add('hidden')
     }
 }
+

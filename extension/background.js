@@ -13,6 +13,14 @@ chrome.runtime.onInstalled.addListener(() => {
     })
 })
 
+function sendTabMessage(tabId, message) {
+    chrome.tabs.sendMessage(tabId, message, () => {
+        if (chrome.runtime.lastError) {
+            console.warn('[VerifAI] Content script not available in tab:', chrome.runtime.lastError.message)
+        }
+    })
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'open_tab') {
         chrome.tabs.create({ url: request.url })
@@ -23,21 +31,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false
     }
 
-    return _callBackend({
+    _callBackend({
         input_type: request.type || 'text',
         content: request.content,
     })
-        .then(data => ({ status: 'success', data }))
+        .then(data => sendResponse({ status: 'success', data }))
         .catch(error => {
             console.error('Backend error:', error)
-            return { status: 'error', message: 'Cannot connect to VerifAI server.' }
+            sendResponse({ status: 'error', message: 'Cannot connect to VerifAI server.' })
         })
+    return true
 })
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     if (info.menuItemId === "check-image") {
-        chrome.tabs.sendMessage(tab.id, { type: "SHOW_LOADING" })
+        sendTabMessage(tab.id, { type: "SHOW_LOADING" })
         try {
             let content, input_type
             try {
@@ -48,9 +57,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 input_type = "url"
             }
             const verdict = await _callBackend({ input_type, content })
-            chrome.tabs.sendMessage(tab.id, { type: "SHOW_VERDICT", verdict })
+            sendTabMessage(tab.id, { type: "SHOW_VERDICT", verdict })
         } catch (err) {
-            chrome.tabs.sendMessage(tab.id, {
+            sendTabMessage(tab.id, {
                 type: "SHOW_ERROR",
                 message: "Hindi ma-check ang larawan. Subukan muli.",
             })
@@ -58,12 +67,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
 
     if (info.menuItemId === "check-text") {
-        chrome.tabs.sendMessage(tab.id, { type: "SHOW_LOADING" })
+        sendTabMessage(tab.id, { type: "SHOW_LOADING" })
         try {
             const verdict = await _callBackend({ input_type: "text", content: info.selectionText })
-            chrome.tabs.sendMessage(tab.id, { type: "SHOW_VERDICT", verdict })
+            sendTabMessage(tab.id, { type: "SHOW_VERDICT", verdict })
         } catch (err) {
-            chrome.tabs.sendMessage(tab.id, {
+            sendTabMessage(tab.id, {
                 type: "SHOW_ERROR",
                 message: "Hindi ma-check ang teksto. Subukan muli.",
             })
