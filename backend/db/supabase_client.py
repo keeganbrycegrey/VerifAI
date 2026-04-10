@@ -23,7 +23,12 @@ def _get_client() -> Client:
 
 
 async def save_verdict(verdict: Verdict) -> None:
-    """Insert a new verdict or update the existing row for the same claim (upsert).    """
+    """Insert every verdict as a new row so check counts accumulate correctly.
+    
+    Previously this used upsert(on_conflict='claim') which collapsed all checks
+    of the same claim into one row — so trending counts were always 1 and
+    total_checks_today / all_time were always under-counted.
+    """
     try:
         db = _get_client()
         row = {
@@ -41,27 +46,11 @@ async def save_verdict(verdict: Verdict) -> None:
             "trace":              verdict.trace.model_dump() if verdict.trace else None,
             "source_credibility": [sc.model_dump() for sc in verdict.source_credibility],
         }
-        # Try native upsert (requires unique constraint on 'claim' in Supabase)
-        db.table("verdicts").upsert(row, on_conflict="claim").execute()
+        # Always insert — never upsert. Each fact-check run is its own row so
+        # check_count, today/all-time totals, and trending all accumulate correctly.
+        db.table("verdicts").insert(row).execute()
     except Exception as e:
-        print(f"supabase upsert error (falling back to insert): {e}")
-        try:
-            # Fallback: manual check-then-update so a failed upsert never silently drops data
-            existing = (
-                _get_client().table("verdicts")
-                .select("id")
-                .ilike("claim", verdict.claim.strip())
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                row_id = existing.data[0]["id"]
-                _get_client().table("verdicts").update(row).eq("id", row_id).execute()
-                print(f"supabase fallback: updated existing row id={row_id}")
-            else:
-                _get_client().table("verdicts").insert(row).execute()
-        except Exception as e2:
-            print(f"supabase save error: {e2}")
+        print(f"supabase insert error: {e}")
 
 
 async def get_recent_verdicts(limit: int = 20) -> list[VerdictSummary]:
@@ -80,26 +69,33 @@ async def get_recent_verdicts(limit: int = 20) -> list[VerdictSummary]:
 
 
 async def get_trending_claims(limit: int = 10) -> list[TrendingClaim]:
+    """Return claims sorted by how many times they've been checked.
+    
+    Because save_verdict now inserts every check as a new row, grouping by
+    claim_text and counting rows gives the real check_count.
+    """
     try:
         res = (
             _get_client().table("verdicts")
             .select("claim, rating, timestamp")
             .order("timestamp", desc=True)
-            .limit(200)
+            .limit(500)  # wider window so popular claims surface correctly
             .execute()
         )
 
         claim_counts: dict = defaultdict(lambda: {"count": 0, "ratings": [], "timestamps": []})
         for row in res.data:
-            claim_counts[row["claim"]]["count"] += 1
-            claim_counts[row["claim"]]["ratings"].append(row["rating"])
-            claim_counts[row["claim"]]["timestamps"].append(row["timestamp"])
+            key = row["claim"].strip().lower()  # normalise so near-duplicates merge
+            claim_counts[key]["count"] += 1
+            claim_counts[key]["ratings"].append(row["rating"])
+            claim_counts[key]["timestamps"].append(row["timestamp"])
+            claim_counts[key]["display"] = row["claim"]  # keep original casing for display
 
         trending = []
-        for claim_text, data in sorted(claim_counts.items(), key=lambda x: -x[1]["count"])[:limit]:
+        for key, data in sorted(claim_counts.items(), key=lambda x: -x[1]["count"])[:limit]:
             dominant = Counter(data["ratings"]).most_common(1)[0][0]
             trending.append(TrendingClaim(
-                claim=claim_text,
+                claim=data.get("display", key),
                 check_count=data["count"],
                 dominant_rating=dominant,
                 first_seen=min(data["timestamps"]),
@@ -143,6 +139,7 @@ async def get_coverage_heatmap() -> dict:
 
 
 async def get_cached_verdict(claim_text: str) -> Verdict | None:
+    """Return the most recent verdict for this claim text (used by pipeline cache)."""
     try:
         res = (
             _get_client().table("verdicts")
@@ -157,8 +154,6 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
 
         row = res.data[0]
 
-        # trace and source_credibility may not exist in older DB rows
-        # Verdict model has Optional defaults so this is safe
         return Verdict(
             claim=row["claim"],
             rating=row["rating"],
@@ -181,7 +176,6 @@ async def get_cached_verdict(claim_text: str) -> Verdict | None:
 
 
 def _build_trace_from_row(row: dict) -> "VerdictTrace | None":
-    # rebuild trace from stored data if available, else build a minimal one
     stored = row.get("trace")
     if stored and stored.get("steps"):
         try:
@@ -189,7 +183,6 @@ def _build_trace_from_row(row: dict) -> "VerdictTrace | None":
             return VerdictTrace(steps=steps, summary=stored.get("summary", ""))
         except Exception:
             pass
-    # build minimal trace from what we have
     steps = []
     fact_checks = row.get("fact_checks") or []
     coverage = row.get("coverage") or {}
@@ -241,7 +234,7 @@ def _build_credibility_from_row(row: dict) -> list:
 
 
 async def get_daily_usage() -> dict:
-    # check counts grouped by day of week (0=Sun, 6=Sat)
+    """Return check counts grouped by day-of-week index (0=Sun … 6=Sat)."""
     try:
         res = (
             _get_client().table("verdicts")
@@ -252,8 +245,9 @@ async def get_daily_usage() -> dict:
         )
         daily: dict = defaultdict(int)
         for row in res.data:
-            dt  = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
-            day = (dt.weekday() + 1) % 7   # python mon=0 → sun=0
+            dt = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+            # Python weekday(): Mon=0 … Sun=6  →  shift so Sun=0, Mon=1 … Sat=6
+            day = (dt.weekday() + 1) % 7
             daily[str(day)] += 1
         return {"daily": dict(daily)}
     except Exception as e:
